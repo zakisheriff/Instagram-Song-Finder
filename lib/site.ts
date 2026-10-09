@@ -10,6 +10,18 @@ export const site = {
   locale: "en",
   /** Fixed rather than computed so pages stay fully static. */
   copyrightYear: 2026,
+  /** ISO date the public content last changed; used by the sitemap. */
+  lastUpdated: "2026-10-09",
+  keywords: [
+    "Instagram Song Finder",
+    "Instagram Music Finder",
+    "Instagram ISRC Finder",
+    "Spotify ISRC Finder",
+    "Find ISRC from Spotify",
+    "ISRC Song Search",
+    "Instagram Reels Song Finder",
+    "Instagram Story Music Finder",
+  ],
   publisher: {
     name: "The Atom",
     url: "https://www.theatom.lk",
