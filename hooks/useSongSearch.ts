@@ -56,16 +56,35 @@ function isSearchable(value: string): boolean {
   return detected.kind !== "text" || detected.query.length >= MIN_TEXT_QUERY_LENGTH;
 }
 
+/**
+ * Requests a search with a time limit and cancellation.
+ *
+ * This deliberately uses a plain AbortController and timer. The shorter
+ * `AbortSignal.any` / `AbortSignal.timeout` helpers are missing from Safari
+ * before 17.4 and other older browsers, where calling them throws and the
+ * search fails before any request is sent.
+ */
 async function fetchSearch(params: URLSearchParams, signal: AbortSignal): Promise<SearchApiResponse> {
-  const response = await fetch(`/api/search?${params}`, {
-    signal: AbortSignal.any([signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]),
-    headers: { Accept: "application/json" },
-  });
-  const body = (await response.json()) as SearchApiResponse;
-  if (typeof body !== "object" || body === null || typeof body.ok !== "boolean") {
-    throw new Error("Malformed response");
+  const controller = new AbortController();
+  const cancel = () => controller.abort();
+  if (signal.aborted) cancel();
+  else signal.addEventListener("abort", cancel, { once: true });
+  const timer = setTimeout(cancel, REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`/api/search?${params}`, {
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
+    const body = (await response.json()) as SearchApiResponse;
+    if (typeof body !== "object" || body === null || typeof body.ok !== "boolean") {
+      throw new Error("Malformed response");
+    }
+    return body;
+  } finally {
+    clearTimeout(timer);
+    signal.removeEventListener("abort", cancel);
   }
-  return body;
 }
 
 function mergeTracks(current: Track[], incoming: Track[]): Track[] {

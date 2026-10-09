@@ -91,6 +91,25 @@ describe("SongFinder", () => {
     expect(within(results).getByText("Data from Spotify")).toBeInTheDocument();
   });
 
+  it("searches on older browsers that lack the newer cancellation helpers", async () => {
+    // Safari before 17.4 has neither of these; calling them there throws.
+    const original = { any: AbortSignal.any, timeout: AbortSignal.timeout };
+    Object.assign(AbortSignal, { any: undefined, timeout: undefined });
+    try {
+      const fetchMock = mockApi({ body: success([track()]) });
+      const { user, input } = setup();
+      await user.type(input, "dole dole than{Enter}");
+
+      expect(await screen.findByRole("region", { name: "Search results" })).toBeInTheDocument();
+      expect(screen.queryByText("Something went wrong. Please try again.")).not.toBeInTheDocument();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const init = fetchMock.mock.calls[0][1] as RequestInit;
+      expect(init.signal).toBeInstanceOf(AbortSignal);
+    } finally {
+      Object.assign(AbortSignal, original);
+    }
+  });
+
   it("copies the full isrc: string with the main button and confirms it", async () => {
     mockApi({ body: success([track()]) });
     const { user, input } = setup();
