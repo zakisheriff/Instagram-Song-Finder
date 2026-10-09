@@ -20,7 +20,7 @@ test("every text control is at least 16px, so iOS never zooms on focus", async (
     await page.goto(path);
     if (path === "/") {
       await searchBox(page).fill("die with a smile");
-      await expect(page.getByText("isrc:USUM72409273").last()).toBeVisible();
+      await expect(page.getByRole("region", { name: "Search results" }).getByText("isrc:USUM72409273")).toBeVisible();
     }
     const sizes = await page.evaluate(() =>
       Array.from(document.querySelectorAll("input, textarea, select")).map((element) =>
@@ -40,7 +40,7 @@ test("no page scrolls horizontally, with or without results", async ({ page, moc
   }
   await page.goto("/");
   await searchBox(page).fill("die with a smile");
-  await expect(page.getByText("isrc:USUM72409273").last()).toBeVisible();
+  await expect(page.getByRole("region", { name: "Search results" }).getByText("isrc:USUM72409273")).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
 
@@ -179,6 +179,26 @@ test("bug reports and missing-song reports open an email to The Atom", async ({ 
   await expect(feature).toHaveAttribute("href", /^mailto:info@theatom\.lk\?subject=Missing%20song/);
 });
 
+test("FAQ answers stay closed until their question is opened", async ({ page }) => {
+  await page.goto("/");
+  const answer = page.getByText("ISRC codes are unique to recordings, not to songs.", { exact: false });
+  await expect(answer).toBeHidden();
+
+  await page.getByRole("button", { name: "Are ISRC codes unique to songs?" }).click();
+  await expect(answer).toBeVisible();
+
+  // Opening another question closes the first.
+  await page.getByRole("button", { name: "What is an ISRC?" }).click();
+  await expect(page.getByText("International Standard Recording Code", { exact: false }).first()).toBeVisible();
+  await expect(answer).toBeHidden();
+});
+
+test("a link to a question opens it", async ({ page }) => {
+  await page.goto("/#what-is-an-isrc");
+  await expect(page.getByRole("button", { name: "What is an ISRC?" })).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByText("defined by the ISO 3901 standard", { exact: false })).toBeVisible();
+});
+
 test("matches the reference field and button metrics", async ({ page }) => {
   await page.goto("/");
   const field = await page.locator(".field").boundingBox();
@@ -251,5 +271,5 @@ test("the search field can be reached and used with the keyboard", async ({ page
   await expect(searchBox(page)).toBeFocused();
   await page.keyboard.type("die with a smile");
   await page.keyboard.press("Enter");
-  await expect(page.getByText("isrc:USUM72409273").last()).toBeVisible();
+  await expect(page.getByRole("region", { name: "Search results" }).getByText("isrc:USUM72409273")).toBeVisible();
 });

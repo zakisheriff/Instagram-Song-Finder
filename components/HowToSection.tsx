@@ -6,11 +6,6 @@ export function HowToSection() {
       <h2 className="content__title" id="how-it-works-title">
         How to use an ISRC code on Instagram
       </h2>
-      <p className="content__lead">
-        Instagram Song Finder turns a song name, artist or Spotify link into the recording&apos;s
-        ISRC, formatted for Instagram music search. From search to paste takes seven steps.
-      </p>
-
       <ol className="steps">
         {howToSteps.map((step) => (
           <li key={step.title}>
