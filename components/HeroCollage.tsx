@@ -1,66 +1,20 @@
 import Image from "next/image";
-import { formatArtists } from "@/lib/music/format";
-import type { Track } from "@/lib/music/types";
-import { formatInstagramIsrc } from "@/lib/search/isrc";
-import { CheckIcon, CopyIcon, NoteIcon } from "./icons";
-import { SiteLogo } from "./SiteLogo";
 
-interface HeroCollageProps {
-  /** The recording currently selected in the results, if any. */
-  track: Track | null;
-}
+/** Intrinsic size of public/hero.webp; reserving it prevents layout shift. */
+const HERO_WIDTH = 1390;
+const HERO_HEIGHT = 1132;
 
-/**
- * The fanned card composition from the reference hero. It is purely
- * illustrative, so it is hidden from assistive technology; the same
- * information is available in the results list.
- */
-export function HeroCollage({ track }: HeroCollageProps) {
+/** The hero illustration shown beside the search panel on desktop. */
+export function HeroCollage() {
   return (
-    <div className="collage" aria-hidden="true">
-      <div className="collage__card collage__card--left">
-        <span className="collage__ghost-pill" />
-      </div>
-      <div className="collage__card collage__card--right">
-        <span className="collage__ghost-pill" />
-      </div>
-
-      <div className={`collage__card collage__card--center${track ? " is-filled" : ""}`}>
-        <div className="collage__progress">
-          <span />
-          <span />
-        </div>
-        <div className="collage__art">
-          {track?.artworkUrl ? (
-            <Image src={track.artworkUrl} alt="" width={300} height={300} unoptimized />
-          ) : (
-            <NoteIcon />
-          )}
-        </div>
-        <p className="collage__title">{track ? track.title : "Your song"}</p>
-        <p className="collage__artist">{track ? formatArtists(track.artists) : "Artist"}</p>
-        <div className="collage__reply">
-          <span className="collage__pill">
-            {track?.isrc ? formatInstagramIsrc(track.isrc) : "isrc:"}
-          </span>
-          <CopyIcon />
-        </div>
-      </div>
-
-      <span className="collage__bubble">
-        <span className="gradient-text">isrc:</span>
-      </span>
-      <span className="collage__check">
-        <CheckIcon />
-      </span>
-      <span className="collage__note">
-        <SiteLogo size={72} />
-      </span>
-      <span className="collage__ring">
-        <span>
-          <NoteIcon />
-        </span>
-      </span>
-    </div>
+    <Image
+      className="collage"
+      src="/hero.webp"
+      alt="Instagram stories with a song added by pasting its isrc: code into music search"
+      width={HERO_WIDTH}
+      height={HERO_HEIGHT}
+      sizes="(max-width: 875px) 1px, (max-width: 1400px) 48vw, 670px"
+      priority
+    />
   );
 }

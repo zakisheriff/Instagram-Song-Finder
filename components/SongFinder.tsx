@@ -47,7 +47,7 @@ export function SongFinder({ headline }: SongFinderProps) {
             <SiteLockup />
           </p>
           {headline}
-          <HeroCollage track={selected} />
+          <HeroCollage />
         </div>
       </section>
 

@@ -190,10 +190,7 @@ The app logo (`assets/brand/logo.webp`) appears top-left on desktop and is the s
 
 The site name is shown as a lockup: the Instagram wordmark from the capture followed by "Song Finder" (`components/SiteLockup.tsx`). The wordmark is a trademark of Meta Platforms, Inc. Meta's brand guidelines restrict using its marks inside another product's name or logo, so the owner of this site is responsible for that use; replacing the drawing with plain text is a one-component change.
 
-Two kinds of asset from the capture are not used, because they belong to third parties:
-
-- Meta's proprietary typefaces (the reference's own system-font fallback is used for the interface and Figtree for the headline),
-- the photographs in the hero (the fanned cards are rebuilt in CSS and show the selected song's artwork).
+The hero illustration is the owner-supplied image `public/hero.webp`. Meta's proprietary typefaces from the capture are not used: the reference's own system-font fallback is used for the interface and Figtree for the headline.
 
 The capture folder `www.instagram.com-clone/` is git-ignored for the same reason and is not needed to build or run the site.
 
