@@ -38,7 +38,13 @@ const securityHeaders = [
   ...(isProduction ? [{ key: "Content-Security-Policy", value: contentSecurityPolicy }] : []),
 ];
 
+// Pin the workspace root to this project so a stray lockfile higher up the
+// directory tree is never mistaken for it.
+const projectRoot = process.cwd();
+
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: projectRoot,
+  turbopack: { root: projectRoot },
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
