@@ -119,10 +119,6 @@ export function SongFinder({ headline }: SongFinderProps) {
           </a>
         </form>
 
-        <p className="panel__links">
-          <a href="#how-it-works">How it works</a> or <a href="#faq">read the FAQ</a>
-        </p>
-
         <SearchResults
           search={search}
           selectedId={selected?.id ?? null}

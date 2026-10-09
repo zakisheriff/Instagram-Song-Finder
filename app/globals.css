@@ -697,10 +697,6 @@ select {
   margin-top: 12px;
 }
 
-.panel__links {
-  display: none;
-}
-
 .panel__byline {
   display: flex;
   align-items: baseline;
@@ -1331,25 +1327,7 @@ select {
 
   .search__submit {
     margin-top: 16px;
-    border-radius: 12px;
     background: var(--color-mobile-action);
-    font-weight: 600;
-  }
-
-  .panel__links {
-    display: block;
-    margin-top: 20px;
-    font-size: 15px;
-    line-height: 18px;
-    text-align: center;
-    color: var(--color-text-muted);
-  }
-
-  .panel__links a {
-    display: inline-block;
-    padding: 8px 0;
-    margin: -8px 0;
-    color: var(--color-link);
     font-weight: 600;
   }
 
