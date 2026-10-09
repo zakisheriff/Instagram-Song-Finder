@@ -5,7 +5,7 @@ import { pageMetadata } from "@/lib/seo/metadata";
 import { subPageGraph } from "@/lib/seo/structured-data";
 import { site } from "@/lib/site";
 
-const title = `Privacy – ${site.name}`;
+const title = `Privacy – ${site.name} by ${site.publisher.name}`;
 const description =
   "How Instagram Song Finder handles your searches: no accounts, no advertising cookies, and what is shared with the music catalogs that answer your query.";
 

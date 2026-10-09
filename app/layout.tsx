@@ -14,7 +14,7 @@ const figtree = Figtree({
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
-  title: { default: site.title, template: `%s – ${site.name}` },
+  title: { default: site.title, template: `%s – ${site.name} by ${site.publisher.name}` },
   description: site.description,
   applicationName: site.name,
   keywords: [...site.keywords],

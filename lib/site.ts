@@ -4,7 +4,7 @@ export const site = {
   shortName: "Song Finder",
   url: "https://instagramsongfinder.theatom.lk",
   domain: "instagramsongfinder.theatom.lk",
-  title: "Instagram Song Finder – Find Songs & Copy ISRC Codes",
+  title: "Instagram Song Finder by The Atom – Find Songs & Copy ISRC Codes",
   description:
     "Find songs for Instagram using a song name, artist, or Spotify link. Get the recording's ISRC code and copy it instantly for Instagram music search.",
   locale: "en",

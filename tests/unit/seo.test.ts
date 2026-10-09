@@ -16,7 +16,7 @@ const byType = (graph: Record<string, unknown>, type: string) =>
 describe("site configuration", () => {
   it("uses the production domain and required homepage copy", () => {
     expect(site.url).toBe("https://instagramsongfinder.theatom.lk");
-    expect(site.title).toBe("Instagram Song Finder – Find Songs & Copy ISRC Codes");
+    expect(site.title).toBe("Instagram Song Finder by The Atom – Find Songs & Copy ISRC Codes");
     expect(site.description).toBe(
       "Find songs for Instagram using a song name, artist, or Spotify link. Get the recording's ISRC code and copy it instantly for Instagram music search.",
     );

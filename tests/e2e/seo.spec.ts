@@ -7,7 +7,7 @@ test.describe("search engine and answer engine readiness", () => {
 
   test("home page ships the required metadata", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveTitle("Instagram Song Finder – Find Songs & Copy ISRC Codes");
+    await expect(page).toHaveTitle("Instagram Song Finder by The Atom – Find Songs & Copy ISRC Codes");
     await expect(page.locator('meta[name="description"]')).toHaveAttribute(
       "content",
       "Find songs for Instagram using a song name, artist, or Spotify link. Get the recording's ISRC code and copy it instantly for Instagram music search.",

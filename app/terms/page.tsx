@@ -5,7 +5,7 @@ import { pageMetadata } from "@/lib/seo/metadata";
 import { subPageGraph } from "@/lib/seo/structured-data";
 import { site } from "@/lib/site";
 
-const title = `Terms of Use – ${site.name}`;
+const title = `Terms of Use – ${site.name} by ${site.publisher.name}`;
 const description =
   "The terms for using Instagram Song Finder: a free ISRC lookup tool provided as is, with no guarantee of song availability on Instagram.";
 

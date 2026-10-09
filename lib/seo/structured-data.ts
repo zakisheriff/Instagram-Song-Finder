@@ -22,7 +22,7 @@ export function websiteNode(): JsonLd {
     "@type": "WebSite",
     "@id": WEBSITE_ID,
     name: site.name,
-    alternateName: site.shortName,
+    alternateName: [`${site.name} by ${site.publisher.name}`, site.shortName],
     url: absoluteUrl("/"),
     description: site.description,
     image: LOGO_URL,
