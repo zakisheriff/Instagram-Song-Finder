@@ -1051,6 +1051,38 @@ select {
   margin: 32px auto 0;
 }
 
+/* ---------- Feedback links ---------- */
+
+.feedback {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.feedback a {
+  display: inline-block;
+  padding: 6px 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.feedback a:hover {
+  color: var(--color-text);
+}
+
+.hero__feedback {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 20px;
+}
+
+.footer__feedback {
+  display: none;
+  margin-top: 4px;
+}
+
 /* ---------- Top-right action ---------- */
 
 .top-action {
@@ -1255,6 +1287,15 @@ select {
 
   .subpage__back {
     max-width: none;
+  }
+
+  /* The hero is not full height on phones, so the links move to the footer. */
+  .hero__feedback {
+    display: none;
+  }
+
+  .footer__feedback {
+    display: block;
   }
 
   .top-action {

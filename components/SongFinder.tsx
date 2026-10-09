@@ -6,6 +6,7 @@ import { useSongSearch } from "@/hooks/useSongSearch";
 import { SEARCH_INPUT_ID } from "@/lib/search/constants";
 import { MAX_QUERY_LENGTH } from "@/lib/search/detect";
 import { site } from "@/lib/site";
+import { FeedbackLinks } from "./FeedbackLinks";
 import { HeroCollage } from "./HeroCollage";
 import { CloseIcon } from "./icons";
 import { SearchResults } from "./SearchResults";
@@ -48,6 +49,7 @@ export function SongFinder({ headline }: SongFinderProps) {
           </p>
           {headline}
           <HeroCollage />
+          <FeedbackLinks className="hero__feedback" />
         </div>
       </section>
 
