@@ -4,6 +4,7 @@ import { site } from "@/lib/site";
 import { MobileTabBar } from "./MobileTabBar";
 import { SiteFooter } from "./SiteFooter";
 import { SiteLockup } from "./SiteLockup";
+import { SiteLogo } from "./SiteLogo";
 
 interface SubPageProps {
   title: string;
@@ -17,6 +18,7 @@ export function SubPage({ title, lead, children }: SubPageProps) {
     <div className="page">
       <header className="subpage__header">
         <Link className="subpage__logo" href="/" aria-label={`${site.name} home`}>
+          <SiteLogo size={36} priority />
           <SiteLockup />
         </Link>
       </header>

@@ -1,34 +1,98 @@
-// Renders the PNG icons from app/icon.svg. Run with `npm run icons` after
-// changing the mark; the generated files are committed.
-import { readFile, writeFile } from "node:fs/promises";
+// Renders every logo-derived asset from assets/brand/logo.webp.
+// Run with `npm run icons` after replacing the logo; the output is committed.
+import { writeFile } from "node:fs/promises";
 import sharp from "sharp";
 
-const source = await readFile(new URL("../app/icon.svg", import.meta.url), "utf8");
-const markPath = source.match(/<path[^>]*\/>/)?.[0];
-const defs = source.match(/<defs>[\s\S]*<\/defs>/)?.[0];
-if (!markPath || !defs) throw new Error("Could not read the mark from app/icon.svg");
+const root = new URL("../", import.meta.url);
+const source = new URL("assets/brand/logo.webp", root);
 
-/** The mark centred on a white square, scaled to leave `padding` (0–0.5) on each side. */
-function framed(size, padding) {
-  const scale = (size * (1 - padding * 2)) / 60;
-  const offset = size * padding;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-    ${defs}
-    <rect width="${size}" height="${size}" fill="#ffffff"/>
-    <g transform="translate(${offset} ${offset}) scale(${scale})">${markPath}</g>
-  </svg>`;
+/**
+ * The artwork is a rounded "squircle" drawn on an opaque white square. This
+ * mask follows that outline (a superellipse, exponent 5, inset a little to
+ * drop the anti-aliased white fringe) so the corners become transparent and
+ * the logo sits cleanly on any background, such as a dark browser tab.
+ */
+function squircleMask(size) {
+  const half = size / 2;
+  const radius = half * 0.985;
+  const points = [];
+  for (let step = 0; step < 720; step += 1) {
+    const angle = (step / 720) * Math.PI * 2;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const reach = radius / (Math.abs(cos) ** 5 + Math.abs(sin) ** 5) ** (1 / 5);
+    const clamp = (value) => Math.max(0, Math.min(size, value));
+    points.push(`${clamp(half + cos * reach).toFixed(2)},${clamp(half + sin * reach).toFixed(2)}`);
+  }
+  return Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><polygon points="${points.join(" ")}" fill="#fff"/></svg>`,
+  );
 }
 
-const targets = [
-  { file: "../public/icons/icon-192.png", size: 192, padding: 0.18 },
-  { file: "../public/icons/icon-512.png", size: 512, padding: 0.18 },
-  // Maskable icons keep the mark inside the central safe zone.
-  { file: "../public/icons/icon-maskable-512.png", size: 512, padding: 0.26 },
-  { file: "../app/apple-icon.png", size: 180, padding: 0.2 },
-];
-
-for (const { file, size, padding } of targets) {
-  const png = await sharp(Buffer.from(framed(size, padding))).png({ compressionLevel: 9 }).toBuffer();
-  await writeFile(new URL(file, import.meta.url), png);
-  console.log(`${file.replace("../", "")}  ${size}x${size}  ${png.length} bytes`);
+/** The logo with transparent corners, as a PNG buffer. */
+async function logo(size) {
+  return sharp(source.pathname)
+    .resize(size, size, { kernel: "lanczos3" })
+    .ensureAlpha()
+    .composite([{ input: squircleMask(size), blend: "dest-in" }])
+    .png({ compressionLevel: 9 })
+    .toBuffer();
 }
+
+/** The logo centred on an opaque white square, covering `scale` of its width. */
+async function onWhite(size, scale) {
+  const inner = Math.round(size * scale);
+  return sharp({ create: { width: size, height: size, channels: 4, background: "#ffffff" } })
+    .composite([{ input: await logo(inner), gravity: "centre" }])
+    .flatten({ background: "#ffffff" })
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+}
+
+/** Wraps PNG images in an ICO container (PNG-in-ICO is supported by all current browsers). */
+function ico(images) {
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(1, 2);
+  header.writeUInt16LE(images.length, 4);
+  let offset = 6 + images.length * 16;
+  const entries = images.map(({ size, data }) => {
+    const entry = Buffer.alloc(16);
+    entry.writeUInt8(size === 256 ? 0 : size, 0);
+    entry.writeUInt8(size === 256 ? 0 : size, 1);
+    entry.writeUInt16LE(1, 4);
+    entry.writeUInt16LE(32, 6);
+    entry.writeUInt32LE(data.length, 8);
+    entry.writeUInt32LE(offset, 12);
+    offset += data.length;
+    return entry;
+  });
+  return Buffer.concat([header, ...entries, ...images.map((image) => image.data)]);
+}
+
+async function save(path, data) {
+  await writeFile(new URL(path, root), data);
+  console.log(`${path}  ${data.length} bytes`);
+}
+
+await save("public/logo.png", await logo(512));
+await save("public/icons/icon-192.png", await logo(192));
+await save("public/icons/icon-512.png", await logo(512));
+// Maskable icons keep the whole logo inside the central safe zone.
+await save("public/icons/icon-maskable-512.png", await onWhite(512, 0.74));
+// iOS applies its own corner mask, so this one stays an opaque square.
+await save(
+  "app/apple-icon.png",
+  await sharp(source.pathname).resize(180, 180).flatten({ background: "#ffffff" }).png().toBuffer(),
+);
+await save("app/icon.png", await logo(96));
+await save(
+  "app/favicon.ico",
+  ico(await Promise.all([16, 32, 48].map(async (size) => ({ size, data: await logo(size) })))),
+);
+
+// Inlined into the generated social sharing image, which cannot read files at request time.
+const inline = (await logo(192)).toString("base64");
+await save(
+  "lib/brand/logo-data-uri.ts",
+  `// Generated by scripts/generate-icons.mjs. Do not edit by hand.\nexport const LOGO_DATA_URI =\n  "data:image/png;base64,${inline}";\n`,
+);

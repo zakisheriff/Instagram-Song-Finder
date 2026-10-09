@@ -18,6 +18,9 @@ test.describe("search engine and answer engine readiness", () => {
     await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "Instagram Song Finder");
     await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", new RegExp(`^${ORIGIN}/opengraph-image`));
     await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
+    await expect(page.locator('link[rel="icon"][href^="/favicon.ico"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="icon"][href^="/icon.png"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute("href", /^\/apple-icon\.png/);
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(page.locator("h1")).toHaveCount(1);
     await expect(page.locator("h1")).toHaveText("Find songs on Instagram by their ISRC code.");
@@ -83,7 +86,17 @@ test.describe("search engine and answer engine readiness", () => {
     const manifest = await (await request.get("/manifest.webmanifest")).json();
     expect(manifest.name).toBe("Instagram Song Finder");
 
-    for (const asset of ["/opengraph-image", "/icon.svg", "/apple-icon.png", "/icons/icon-512.png", "/llms.txt"]) {
+    for (const asset of [
+      "/opengraph-image",
+      "/favicon.ico",
+      "/icon.png",
+      "/apple-icon.png",
+      "/logo.png",
+      "/icons/icon-192.png",
+      "/icons/icon-512.png",
+      "/icons/icon-maskable-512.png",
+      "/llms.txt",
+    ]) {
       expect((await request.get(asset)).status(), asset).toBe(200);
     }
   });

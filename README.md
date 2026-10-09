@@ -60,7 +60,7 @@ The two Spotify variables must be set together; the build fails if only one is p
 | `npm run test` | Unit and component tests (Vitest) |
 | `npm run test:e2e` | End-to-end tests (Playwright; builds the app first) |
 | `npm run test:all` | Lint, typecheck, unit tests and end-to-end tests |
-| `npm run icons` | Regenerates the PNG icons from `app/icon.svg` |
+| `npm run icons` | Regenerates the favicon, app icons and logo files from `assets/brand/logo.webp` |
 
 Before the first end-to-end run, install the browsers once: `npx playwright install chromium webkit`.
 
@@ -185,6 +185,8 @@ The built-in rate limiter keeps its counters in server memory, so on serverless 
 ## Design reference
 
 The interface reproduces the layout, spacing, colours, type scale and component shapes recorded in the supplied reference capture (`styles/layout.json` for desktop, `styles/layout.mobile.json` for phones): the two-column hero and form panel, 60px fields with a 16px radius and floating label, 44px pill buttons in three styles, the footer link row, and on phones the centred landing with the bottom tab bar.
+
+The app logo (`assets/brand/logo.webp`) appears top-left on desktop and is the source for the favicon, touch and install icons, the social sharing image and the `image` in the structured data. To change it, replace that file and run `npm run icons`.
 
 The site name is shown as a lockup: the Instagram wordmark from the capture followed by "Song Finder" (`components/SiteLockup.tsx`). The wordmark is a trademark of Meta Platforms, Inc. Meta's brand guidelines restrict using its marks inside another product's name or logo, so the owner of this site is responsible for that use; replacing the drawing with plain text is a one-component change.
 

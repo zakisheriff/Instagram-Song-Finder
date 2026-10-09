@@ -76,6 +76,7 @@ describe("structured data", () => {
     });
     expect(byType(graph, "WebApplication")).toMatchObject({
       applicationCategory: "MultimediaApplication",
+      image: "https://instagramsongfinder.theatom.lk/logo.png",
       isAccessibleForFree: true,
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
     });

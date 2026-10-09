@@ -2,8 +2,8 @@ import Image from "next/image";
 import { formatArtists } from "@/lib/music/format";
 import type { Track } from "@/lib/music/types";
 import { formatInstagramIsrc } from "@/lib/search/isrc";
-import { BrandMark } from "./BrandMark";
 import { CheckIcon, CopyIcon, NoteIcon } from "./icons";
+import { SiteLogo } from "./SiteLogo";
 
 interface HeroCollageProps {
   /** The recording currently selected in the results, if any. */
@@ -54,7 +54,7 @@ export function HeroCollage({ track }: HeroCollageProps) {
         <CheckIcon />
       </span>
       <span className="collage__note">
-        <BrandMark />
+        <SiteLogo size={72} />
       </span>
       <span className="collage__ring">
         <span>

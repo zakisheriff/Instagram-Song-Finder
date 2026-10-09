@@ -5,6 +5,7 @@ type JsonLd = Record<string, unknown>;
 const ORGANIZATION_ID = `${site.publisher.url}/#organization`;
 const WEBSITE_ID = absoluteUrl("/#website");
 const WEBAPP_ID = absoluteUrl("/#webapp");
+const LOGO_URL = absoluteUrl("/logo.png");
 
 /** The Atom, the publisher of the site. */
 export function organizationNode(): JsonLd {
@@ -24,6 +25,7 @@ export function websiteNode(): JsonLd {
     alternateName: site.shortName,
     url: absoluteUrl("/"),
     description: site.description,
+    image: LOGO_URL,
     inLanguage: site.locale,
     publisher: { "@id": ORGANIZATION_ID },
   };
@@ -37,6 +39,7 @@ export function webApplicationNode(): JsonLd {
     name: site.name,
     url: absoluteUrl("/"),
     description: site.description,
+    image: LOGO_URL,
     applicationCategory: "MultimediaApplication",
     applicationSubCategory: "Music metadata lookup",
     operatingSystem: "Any",
