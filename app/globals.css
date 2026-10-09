@@ -1085,51 +1085,90 @@ select {
 
 /* ---------- Top-right action ---------- */
 
+/*
+ * One pill that morphs between "Star on GitHub" (white) and "Try now" (blue).
+ * The shell animates width and colour; the labels sit on top of each other
+ * and cross-fade, so the change reads as a single continuous motion.
+ */
 .top-action {
+  --morph: 0.55s cubic-bezier(0.22, 1, 0.36, 1);
   position: fixed;
   top: 40px;
   right: 40px;
   z-index: 20;
-}
-
-.top-action__button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 0 20px;
+  width: var(--star-width, 151px);
+  height: 44px;
   border: 1px solid var(--color-border);
   border-radius: 22px;
   background: var(--color-bg);
-  color: var(--color-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  transition:
+    width var(--morph),
+    background-color var(--morph),
+    border-color var(--morph),
+    box-shadow var(--morph);
+}
+
+.top-action.is-try {
+  width: var(--try-width, 104px);
+  border-color: var(--color-blue);
+  background: var(--color-blue);
+  box-shadow: 0 4px 14px rgba(0, 100, 224, 0.28);
+}
+
+.top-action:hover {
+  background: var(--color-surface);
+}
+
+.top-action.is-try:hover {
+  background: rgb(0, 88, 198);
+}
+
+.top-action__label {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 20px;
   font-size: 15px;
   font-weight: 600;
   line-height: 19px;
   white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  animation: top-action-in 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    opacity 0.3s ease,
+    transform var(--morph),
+    filter 0.3s ease;
 }
 
-.top-action__button:hover {
-  background: var(--color-surface);
+.top-action__label--star {
+  color: var(--color-text);
 }
 
-.top-action__button--try {
-  border-color: var(--color-blue);
-  background: var(--color-blue);
+.top-action__label--try {
   color: #fff;
-  box-shadow: 0 4px 14px rgba(0, 100, 224, 0.28);
+  opacity: 0;
+  transform: translateX(12px);
+  filter: blur(4px);
+  pointer-events: none;
 }
 
-.top-action__button--try:hover {
-  background: rgb(0, 88, 198);
+.top-action.is-try .top-action__label--star {
+  opacity: 0;
+  transform: translateX(-12px);
+  filter: blur(4px);
+  pointer-events: none;
 }
 
-@keyframes top-action-in {
-  from {
-    opacity: 0;
-    transform: translateY(-6px) scale(0.96);
-  }
+.top-action.is-try .top-action__label--try {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  pointer-events: auto;
+  transition-delay: 0.08s;
 }
 
 /* ---------- Footer ---------- */
