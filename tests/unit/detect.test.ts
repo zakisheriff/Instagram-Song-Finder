@@ -117,6 +117,88 @@ describe("detectInput: Spotify links", () => {
   });
 });
 
+describe("detectInput: Apple Music links", () => {
+  it("reads the song id and storefront from album and song links", () => {
+    expect(
+      detectInput("https://music.apple.com/lk/album/magale-from-baththa/6810160390?i=6810160531"),
+    ).toEqual({ kind: "apple-music-track", trackId: "6810160531", country: "lk" });
+    expect(detectInput("https://music.apple.com/us/song/blinding-lights/1488408568")).toEqual({
+      kind: "apple-music-track",
+      trackId: "1488408568",
+      country: "us",
+    });
+    expect(detectInput("music.apple.com/album/x/123?i=456")).toEqual({
+      kind: "apple-music-track",
+      trackId: "456",
+      country: "us",
+    });
+  });
+
+  it.each([
+    "https://music.apple.com/lk/album/magale-from-baththa/6810160390",
+    "https://music.apple.com/us/playlist/todays-hits/pl.f4d106fed2bd41149aaacabb233eb5eb",
+    "https://music.apple.com/us/artist/the-weeknd/479756766",
+    "https://music.apple.com/us/album/x/1?i=abc",
+  ])("explains that %j is not a single song", (input) => {
+    expect(detectInput(input)).toMatchObject({ kind: "invalid", reason: "unsupported-apple-type" });
+  });
+
+  it("does not trust look-alike hosts", () => {
+    expect(detectInput("https://music.apple.com.evil.example/us/song/x/1")).toMatchObject({
+      kind: "invalid",
+      reason: "unsupported-url",
+    });
+  });
+});
+
+describe("detectInput: other music services", () => {
+  it("recognises Deezer track links", () => {
+    expect(detectInput("https://www.deezer.com/us/track/2947516331?utm_source=x")).toEqual({
+      kind: "deezer-track",
+      trackId: "2947516331",
+    });
+    expect(detectInput("https://deezer.com/track/3135556")).toEqual({ kind: "deezer-track", trackId: "3135556" });
+  });
+
+  it.each([
+    "https://www.youtube.com/watch?v=kPa7bsKwL-c&list=PLabc&t=10s",
+    "https://music.youtube.com/watch?v=kPa7bsKwL-c&si=xyz",
+    "https://youtu.be/kPa7bsKwL-c?si=xyz",
+    "https://m.youtube.com/shorts/kPa7bsKwL-c",
+  ])("reduces %j to a clean YouTube video link", (input) => {
+    expect(detectInput(input)).toEqual({
+      kind: "title-link",
+      service: "youtube",
+      url: "https://www.youtube.com/watch?v=kPa7bsKwL-c",
+    });
+  });
+
+  it("recognises SoundCloud track links", () => {
+    expect(detectInput("https://soundcloud.com/forss/flickermood?si=abc")).toEqual({
+      kind: "title-link",
+      service: "soundcloud",
+      url: "https://soundcloud.com/forss/flickermood",
+    });
+  });
+
+  it.each([
+    "https://www.deezer.com/us/album/302127",
+    "https://www.youtube.com/playlist?list=PLabc",
+    "https://www.youtube.com/watch?v=short",
+    "https://www.youtube.com/@LadyGaga",
+    "https://soundcloud.com/forss",
+    "https://soundcloud.com/forss/sets/soulhack",
+  ])("explains that %j is not a single song", (input) => {
+    expect(detectInput(input)).toMatchObject({ kind: "invalid", reason: "unsupported-music-link" });
+  });
+
+  it("names the supported services for anything else", () => {
+    const result = detectInput("https://tidal.com/browse/track/77640617");
+    expect(result).toMatchObject({ kind: "invalid", reason: "unsupported-url" });
+    expect(result.kind === "invalid" && result.message).toContain("Apple Music");
+  });
+});
+
 describe("detectInput: ISRC codes", () => {
   it.each([
     ["INT202506147", "INT202506147"],

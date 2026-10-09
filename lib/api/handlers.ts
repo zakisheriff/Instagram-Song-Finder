@@ -11,6 +11,9 @@ export interface HandlerDeps {
   getProviders: () => MusicProvider[];
   limiter: RateLimiter;
   resolveShortLink?: ResolveOptions["resolveShortLink"];
+  lookupAppleTrack?: ResolveOptions["lookupAppleTrack"];
+  fetchSpotifyTitle?: ResolveOptions["fetchSpotifyTitle"];
+  fetchLinkTitle?: ResolveOptions["fetchLinkTitle"];
   cache?: ResolveOptions["cache"];
   logger?: Pick<Console, "error">;
 }
@@ -108,13 +111,16 @@ export function handleSearch(request: Request, deps: HandlerDeps): Promise<Respo
   return run(request, deps, async (params) => {
     const parsed = searchSchema.safeParse(Object.fromEntries(params));
     if (!parsed.success) {
-      throw invalid("Enter a song, artist, Spotify link or ISRC to search.");
+      throw invalid("Enter a song, artist, music link or ISRC to search.");
     }
     return resolveQuery(parsed.data.q, {
       providers: deps.getProviders(),
       offset: parsed.data.offset,
       provider: parsed.data.provider,
       resolveShortLink: deps.resolveShortLink,
+      lookupAppleTrack: deps.lookupAppleTrack,
+      fetchSpotifyTitle: deps.fetchSpotifyTitle,
+      fetchLinkTitle: deps.fetchLinkTitle,
       cache: deps.cache,
     });
   });
@@ -142,14 +148,17 @@ export function handleTrack(request: Request, deps: HandlerDeps): Promise<Respon
       query = parsed.data.url!;
       const detected = detectInput(query);
       if (detected.kind === "invalid") throw invalid(detected.message);
-      if (detected.kind !== "spotify-track" && detected.kind !== "spotify-short-link") {
-        throw invalid("`url` must be a Spotify track link, share link or spotify:track: URI.");
+      if (detected.kind === "text" || detected.kind === "isrc" || detected.kind === "empty") {
+        throw invalid("`url` must be a song link from a supported service, or a spotify:track: URI.");
       }
     }
 
     return resolveQuery(query, {
       providers: deps.getProviders(),
       resolveShortLink: deps.resolveShortLink,
+      lookupAppleTrack: deps.lookupAppleTrack,
+      fetchSpotifyTitle: deps.fetchSpotifyTitle,
+      fetchLinkTitle: deps.fetchLinkTitle,
       cache: deps.cache,
     });
   });

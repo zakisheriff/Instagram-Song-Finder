@@ -98,8 +98,8 @@ export function SearchResults({ search, selectedId, onSelect }: SearchResultsPro
         <div className="results__empty">
           <strong>No songs found</strong>
           <p>
-            Check the spelling, add the artist name, or paste the song&apos;s Spotify link or ISRC
-            instead.
+            Check the spelling, add the artist name, or paste the song&apos;s link from Spotify, Apple
+            Music, YouTube, Deezer or SoundCloud instead.
           </p>
         </div>
       )}
@@ -108,8 +108,10 @@ export function SearchResults({ search, selectedId, onSelect }: SearchResultsPro
         <>
           <div className="results__status">
             <span>
-              {result.approximate
-                ? "No exact match. Showing the closest results"
+              {result.notice
+                ? result.notice
+                : result.approximate
+                  ? "No exact match. Showing the closest results"
                 : result.kind === "text"
                   ? "Select the correct recording"
                 : result.kind === "isrc"

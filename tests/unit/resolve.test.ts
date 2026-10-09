@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TtlCache } from "@/lib/cache/ttl-cache";
 import { MusicError } from "@/lib/music/errors";
+import { linkTitleToQuery } from "@/lib/links/title";
 import { resolveQuery } from "@/lib/search/resolve";
 import { editDistance, relaxedQueries, tokenize, trackSimilarity } from "@/lib/search/similarity";
 import { page, stubProvider, track } from "./helpers/stub-provider";
 
 const ID = "2plbrEY59IikOBgBGLjaoe";
 let cache: TtlCache<unknown>;
+/** Stand-ins for the public Spotify title and Apple lookups, so tests never touch the network. */
+const noTitle = async () => null;
+const noApple = async () => null;
 
 beforeEach(() => {
   cache = new TtlCache<unknown>();
@@ -112,6 +116,130 @@ describe("resolveQuery: text", () => {
     await Promise.all([resolveQuery("Bad Guy", options), resolveQuery("bad guy", options)]);
     await resolveQuery("BAD GUY", options);
     expect(spotify.searchTracks).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("resolveQuery: links without Spotify access", () => {
+  const deezerTrack = track({ id: "deezer:9", provider: "deezer", title: "Magale (From \"Baththa\")", artists: ["Sai Abhyankkar"], durationMs: 257_000, isrc: "INT202607391" });
+
+  it("turns a Spotify link into a title search when Spotify refuses the lookup", async () => {
+    const spotify = stubProvider("spotify", {
+      getTrack: vi.fn(async () => {
+        throw new MusicError("PROVIDER_AUTH", "Spotify refused the request (403)");
+      }),
+    });
+    const deezer = stubProvider("deezer", { searchTracks: vi.fn(async () => page([deezerTrack])) });
+    const fetchSpotifyTitle = vi.fn(async () => 'Magale - From "Baththa"');
+
+    const result = await resolveQuery(`https://open.spotify.com/track/${ID}?si=1`, {
+      providers: [spotify, deezer],
+      cache,
+      fetchSpotifyTitle,
+    });
+    expect(fetchSpotifyTitle).toHaveBeenCalledWith(ID);
+    expect(result).toMatchObject({ kind: "text", provider: { id: "deezer" }, tracks: [{ isrc: "INT202607391" }] });
+    // It is presented as possible matches, not as the exact track.
+    expect(result.notice).toContain("couldn't confirm this exact track");
+  });
+
+  it("does the same when Spotify isn't configured at all", async () => {
+    const spotify = stubProvider("spotify", { isConfigured: vi.fn(() => false) });
+    const deezer = stubProvider("deezer", { searchTracks: vi.fn(async () => page([deezerTrack])) });
+    const result = await resolveQuery(`spotify:track:${ID}`, {
+      providers: [spotify, deezer],
+      cache,
+      fetchSpotifyTitle: async () => "Magale",
+    });
+    expect(result.tracks).toHaveLength(1);
+    expect(result.notice).toBeDefined();
+  });
+
+  it("matches an Apple Music link by title, artist and length", async () => {
+    const other = track({ id: "deezer:10", provider: "deezer", title: "Magale (Slowed + Reverb) Baththa", durationMs: 293_000, isrc: "QT9XG2630633" });
+    const cover = track({ id: "deezer:11", provider: "deezer", title: "Chellame Magale", durationMs: 256_000, isrc: "INT202607426" });
+    const deezer = stubProvider("deezer", { searchTracks: vi.fn(async () => page([deezerTrack, cover, other])) });
+    const lookupAppleTrack = vi.fn(async () => ({
+      title: 'Magale (From "Baththa")',
+      artist: "Sai Abhyankkar, Harini & Karthik Netha",
+      durationMs: 257_813,
+    }));
+
+    const result = await resolveQuery(
+      "https://music.apple.com/lk/album/magale-from-baththa/6810160390?i=6810160531",
+      { providers: [deezer], cache, lookupAppleTrack },
+    );
+    expect(lookupAppleTrack).toHaveBeenCalledWith("6810160531", "lk");
+    expect(deezer.searchTracks).toHaveBeenCalledWith('Magale (From "Baththa") Sai Abhyankkar', { offset: 0 });
+    expect(result).toMatchObject({ kind: "link-match", total: 1, tracks: [{ isrc: "INT202607391" }] });
+    expect(result.notice).toContain("Apple Music");
+    expect(result.approximate).toBeUndefined();
+  });
+
+  it("shows the closest results, marked approximate, when nothing matches an Apple Music link", async () => {
+    const wrongLength = track({ id: "deezer:12", provider: "deezer", title: "Magale (Live)", durationMs: 400_000 });
+    const deezer = stubProvider("deezer", { searchTracks: vi.fn(async () => page([wrongLength])) });
+    const result = await resolveQuery("https://music.apple.com/us/song/magale/6810160531", {
+      providers: [deezer],
+      cache,
+      lookupAppleTrack: async () => ({ title: "Magale", artist: "Sai Abhyankkar", durationMs: 257_813 }),
+    });
+    expect(result).toMatchObject({ kind: "link-match", approximate: true });
+    expect(result.notice).toContain("No exact match");
+  });
+
+  it("answers NOT_FOUND when Apple doesn't know the song", async () => {
+    await expect(
+      resolveQuery("https://music.apple.com/us/song/x/1", {
+        providers: [stubProvider("deezer")],
+        cache,
+        lookupAppleTrack: noApple,
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("resolveQuery: links from other services", () => {
+  it("returns the exact recording for a Deezer link", async () => {
+    const deezer = stubProvider("deezer", { getTrack: vi.fn(async () => track({ provider: "deezer" })) });
+    const result = await resolveQuery("https://www.deezer.com/us/track/2947516331", { providers: [deezer], cache });
+    expect(deezer.getTrack).toHaveBeenCalledWith("2947516331");
+    expect(result).toMatchObject({ kind: "link-match", total: 1, notice: "Exact match for your Deezer link" });
+  });
+
+  it("turns a YouTube link into a search for the cleaned-up title", async () => {
+    const deezer = stubProvider("deezer", { searchTracks: vi.fn(async () => page([track({ provider: "deezer" })])) });
+    const fetchLinkTitle = vi.fn(async () => ({
+      title: "Lady Gaga, Bruno Mars - Die With A Smile (Official Music Video)",
+      author: "LadyGagaVEVO",
+    }));
+    const result = await resolveQuery("https://youtu.be/kPa7bsKwL-c?si=1", { providers: [deezer], cache, fetchLinkTitle });
+    expect(fetchLinkTitle).toHaveBeenCalledWith("youtube", "https://www.youtube.com/watch?v=kPa7bsKwL-c");
+    expect(deezer.searchTracks).toHaveBeenCalledWith("Lady Gaga, Bruno Mars - Die With A Smile", { offset: 0 });
+    expect(result).toMatchObject({ kind: "link-match", notice: "From your YouTube link. Select the correct recording" });
+  });
+
+  it("says so when a link can't be read or matches nothing", async () => {
+    const deezer = stubProvider("deezer");
+    await expect(
+      resolveQuery("https://soundcloud.com/forss/flickermood", { providers: [deezer], cache, fetchLinkTitle: async () => null }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND", publicMessage: expect.stringContaining("SoundCloud link couldn't be read") });
+    await expect(
+      resolveQuery("https://soundcloud.com/forss/flickermood", {
+        providers: [deezer],
+        cache: new TtlCache<unknown>(),
+        fetchLinkTitle: async () => ({ title: "Flickermood by Forss", author: "Forss" }),
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("link titles", () => {
+  it("strips video labels and uploader suffixes", () => {
+    expect(linkTitleToQuery("youtube", { title: "Blinding Lights (Official Audio)", author: "The Weeknd - Topic" })).toBe(
+      "Blinding Lights The Weeknd",
+    );
+    expect(linkTitleToQuery("youtube", { title: "Artist - Song [Lyrics] | Extra", author: "SomeChannel" })).toBe("Artist - Song");
+    expect(linkTitleToQuery("soundcloud", { title: "Flickermood by Forss", author: "Forss" })).toBe("Flickermood Forss");
   });
 });
 
@@ -247,7 +375,11 @@ describe("resolveQuery: Spotify links", () => {
     const spotify = stubProvider("spotify", { isConfigured: vi.fn(() => false) });
     const deezer = stubProvider("deezer", { searchTracks: vi.fn(async () => page([track()])) });
     await expect(
-      resolveQuery(`https://open.spotify.com/track/${ID}`, { providers: [spotify, deezer], cache }),
+      resolveQuery(`https://open.spotify.com/track/${ID}`, {
+        providers: [spotify, deezer],
+        cache,
+        fetchSpotifyTitle: noTitle,
+      }),
     ).rejects.toMatchObject({ code: "NOT_CONFIGURED", publicMessage: expect.stringContaining("Spotify links") });
     expect(deezer.searchTracks).not.toHaveBeenCalled();
   });
@@ -259,7 +391,11 @@ describe("resolveQuery: Spotify links", () => {
       }),
     });
     await expect(
-      resolveQuery(`spotify:track:${ID}`, { providers: [spotify, stubProvider("deezer")], cache }),
+      resolveQuery(`spotify:track:${ID}`, {
+        providers: [spotify, stubProvider("deezer")],
+        cache,
+        fetchSpotifyTitle: noTitle,
+      }),
     ).rejects.toMatchObject({ code: "PROVIDER_AUTH", publicMessage: expect.stringContaining("Search by song title") });
   });
 

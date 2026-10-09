@@ -32,8 +32,34 @@ const SPOTIFY_ENTITY_TYPES: ReadonlySet<string> = new Set([
   "prerelease",
 ]);
 
+export const APPLE_MUSIC_HOSTS: ReadonlySet<string> = new Set([
+  "music.apple.com",
+  "geo.music.apple.com",
+]);
+
+export const DEEZER_HOSTS: ReadonlySet<string> = new Set(["www.deezer.com", "deezer.com"]);
+
+export const YOUTUBE_HOSTS: ReadonlySet<string> = new Set([
+  "www.youtube.com",
+  "youtube.com",
+  "m.youtube.com",
+  "music.youtube.com",
+  "youtu.be",
+]);
+
+export const SOUNDCLOUD_HOSTS: ReadonlySet<string> = new Set([
+  "soundcloud.com",
+  "www.soundcloud.com",
+  "m.soundcloud.com",
+]);
+
+const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+const SOUNDCLOUD_SLUG_PATTERN = /^[A-Za-z0-9_-]{1,100}$/;
+
 export type InvalidInputReason =
+  | "unsupported-music-link"
   | "too-long"
+  | "unsupported-apple-type"
   | "invalid-isrc"
   | "invalid-spotify-link"
   | "unsupported-spotify-type"
@@ -45,6 +71,9 @@ export type DetectedInput =
   | { kind: "isrc"; isrc: string }
   | { kind: "spotify-track"; trackId: string }
   | { kind: "spotify-short-link"; url: string }
+  | { kind: "apple-music-track"; trackId: string; country: string }
+  | { kind: "deezer-track"; trackId: string }
+  | { kind: "title-link"; service: "youtube" | "soundcloud"; url: string }
   | { kind: "invalid"; reason: InvalidInputReason; message: string };
 
 const INVALID_MESSAGES: Record<InvalidInputReason, string> = {
@@ -55,8 +84,12 @@ const INVALID_MESSAGES: Record<InvalidInputReason, string> = {
     "That Spotify link isn't a valid track link. Copy the link from a song's Share menu and try again.",
   "unsupported-spotify-type":
     "That Spotify link doesn't point to a track. Open the song itself and copy its link.",
+  "unsupported-apple-type":
+    "That Apple Music link doesn't point to a single song. Open the song, choose Share, then Copy Link.",
+  "unsupported-music-link":
+    "That link doesn't point to a single song. Open the song itself and copy its link.",
   "unsupported-url":
-    "Only Spotify track links are supported. You can also search by song title, artist or ISRC.",
+    "That link isn't from a supported service. Paste a song link from Spotify, Apple Music, YouTube, YouTube Music, Deezer or SoundCloud, or search by title, artist or ISRC.",
 };
 
 function invalid(reason: InvalidInputReason): DetectedInput {
@@ -116,6 +149,62 @@ function detectUrl(value: string): DetectedInput | null {
       kind: "spotify-short-link",
       url: `https://${host}${url.pathname.replace(/\/$/, "")}`,
     };
+  }
+
+  if (APPLE_MUSIC_HOSTS.has(host)) {
+    const segments = url.pathname.split("/").filter(Boolean);
+    const country = /^[a-z]{2}$/i.test(segments[0] ?? "") ? segments.shift()!.toLowerCase() : "us";
+    const [type] = segments;
+    const last = segments[segments.length - 1] ?? "";
+    // Song links end in the song id; album links carry the song in `?i=`.
+    const songId =
+      type === "song" && /^\d{1,20}$/.test(last)
+        ? last
+        : type === "album" && /^\d{1,20}$/.test(url.searchParams.get("i") ?? "")
+          ? url.searchParams.get("i")!
+          : null;
+    return songId
+      ? { kind: "apple-music-track", trackId: songId, country }
+      : invalid("unsupported-apple-type");
+  }
+
+  if (DEEZER_HOSTS.has(host)) {
+    const segments = url.pathname.split("/").filter(Boolean);
+    if (/^[a-z]{2}$/i.test(segments[0] ?? "")) segments.shift();
+    const [type, id] = segments;
+    return type === "track" && /^\d{1,20}$/.test(id ?? "")
+      ? { kind: "deezer-track", trackId: id }
+      : invalid("unsupported-music-link");
+  }
+
+  if (YOUTUBE_HOSTS.has(host)) {
+    const segments = url.pathname.split("/").filter(Boolean);
+    const id =
+      host === "youtu.be"
+        ? segments[0]
+        : segments[0] === "watch"
+          ? url.searchParams.get("v")
+          : segments[0] === "shorts" || segments[0] === "live"
+            ? segments[1]
+            : null;
+    // Rebuilt from the validated id so nothing else from the pasted link is forwarded.
+    return id && YOUTUBE_ID_PATTERN.test(id)
+      ? { kind: "title-link", service: "youtube", url: `https://www.youtube.com/watch?v=${id}` }
+      : invalid("unsupported-music-link");
+  }
+
+  if (SOUNDCLOUD_HOSTS.has(host)) {
+    const segments = url.pathname.split("/").filter(Boolean);
+    const [user, track] = segments;
+    const isTrack =
+      segments.length === 2 &&
+      SOUNDCLOUD_SLUG_PATTERN.test(user) &&
+      SOUNDCLOUD_SLUG_PATTERN.test(track) &&
+      !["sets", "likes", "tracks", "albums", "reposts"].includes(track) &&
+      !["discover", "search", "you", "stream", "charts"].includes(user);
+    return isTrack
+      ? { kind: "title-link", service: "soundcloud", url: `https://soundcloud.com/${user}/${track}` }
+      : invalid("unsupported-music-link");
   }
 
   if (SPOTIFY_WEB_HOSTS.has(host)) {

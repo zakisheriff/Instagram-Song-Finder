@@ -13,6 +13,8 @@ export interface SearchSuccess {
   total: number | null;
   /** True when nothing matched as typed and the closest results are shown instead. */
   approximate?: boolean;
+  /** Short explanation shown above the results when they need one. */
+  notice?: string;
 }
 
 export interface ApiFailure {

@@ -17,6 +17,9 @@ function deps(providers: MusicProvider[], overrides: Partial<HandlerDeps> = {}):
     getProviders: () => providers,
     limiter: new RateLimiter({ limit: 100, windowMs: 60_000 }),
     cache: new TtlCache<unknown>(),
+    fetchSpotifyTitle: async () => null,
+    lookupAppleTrack: async () => null,
+    fetchLinkTitle: async () => null,
     logger,
     ...overrides,
   };

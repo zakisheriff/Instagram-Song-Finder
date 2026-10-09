@@ -7,11 +7,20 @@ import type {
   SearchPage,
   Track,
 } from "@/lib/music/types";
+import { lookupAppleTrack as defaultLookupAppleTrack, type AppleTrack } from "@/lib/apple/lookup";
+import {
+  fetchLinkTitle as defaultFetchLinkTitle,
+  linkTitleToQuery,
+  TITLE_LINK_SERVICE_NAMES,
+  type LinkTitle,
+  type TitleLinkService,
+} from "@/lib/links/title";
+import { fetchSpotifyTitle as defaultFetchSpotifyTitle } from "@/lib/spotify/oembed";
 import { resolveSpotifyShortLink } from "@/lib/spotify/short-link";
 import { detectInput, MIN_TEXT_QUERY_LENGTH } from "./detect";
-import { pageSimilarity, relaxedQueries } from "./similarity";
+import { pageSimilarity, relaxedQueries, trackSimilarity } from "./similarity";
 
-export type ResolvedKind = "text" | "isrc" | "spotify-track";
+export type ResolvedKind = "text" | "isrc" | "spotify-track" | "link-match";
 
 export interface ResolveResult {
   kind: ResolvedKind;
@@ -23,6 +32,8 @@ export interface ResolveResult {
   total: number | null;
   /** True when nothing matched the query as typed and a looser search was used. */
   approximate?: boolean;
+  /** Short explanation shown above the results when they need one. */
+  notice?: string;
 }
 
 export interface ResolveOptions {
@@ -31,6 +42,9 @@ export interface ResolveOptions {
   /** Pins pagination to the provider that served the first page. */
   provider?: ProviderId;
   resolveShortLink?: (url: string) => Promise<string>;
+  lookupAppleTrack?: (trackId: string, country: string) => Promise<AppleTrack | null>;
+  fetchSpotifyTitle?: (trackId: string) => Promise<string | null>;
+  fetchLinkTitle?: (service: TitleLinkService, url: string) => Promise<LinkTitle | null>;
   cache?: TtlCache<unknown>;
 }
 
@@ -42,6 +56,8 @@ const SHORT_LINK_TTL_MS = 10 * 60_000;
 const CONFIDENT_MATCH = 0.9;
 /** Another catalog must beat the preferred one by this much to replace it. */
 const SWITCH_MARGIN = 0.05;
+/** Two recordings this close in length are treated as the same one. */
+const LENGTH_TOLERANCE_MS = 3000;
 
 const sharedCache = new TtlCache<unknown>({ maxEntries: 1000 });
 
@@ -92,7 +108,7 @@ export async function resolveQuery(raw: string, options: ResolveOptions): Promis
   switch (detected.kind) {
     case "empty":
       throw new MusicError("INVALID_INPUT", "Empty query", {
-        publicMessage: "Enter a song, artist, Spotify link or ISRC to search.",
+        publicMessage: "Enter a song, artist, music link or ISRC to search.",
       });
 
     case "invalid":
@@ -204,12 +220,10 @@ export async function resolveQuery(raw: string, options: ResolveOptions): Promis
     case "spotify-track":
     case "spotify-short-link": {
       const spotify = options.providers.find((provider) => provider.info.id === "spotify");
-      if (!spotify?.isConfigured()) {
-        throw new MusicError("NOT_CONFIGURED", "Spotify link lookup needs Spotify credentials", {
-          publicMessage:
-            "Spotify links can't be looked up right now. Search by song title and artist instead.",
-        });
-      }
+      const unavailable = new MusicError("NOT_CONFIGURED", "Spotify link lookup needs Spotify credentials", {
+        publicMessage:
+          "Spotify links can't be looked up right now. Search by song title and artist instead.",
+      });
 
       let trackId: string;
       if (detected.kind === "spotify-track") {
@@ -221,6 +235,36 @@ export async function resolveQuery(raw: string, options: ResolveOptions): Promis
         )) as string;
       }
 
+      /**
+       * When Spotify's catalog can't be asked, its public oEmbed endpoint still
+       * gives the track's title. That is enough for a title search, presented
+       * honestly as possible matches rather than as the exact track.
+       */
+      const searchByTitle = async (cause: MusicError): Promise<ResolveResult> => {
+        const fetchTitle = options.fetchSpotifyTitle ?? defaultFetchSpotifyTitle;
+        const title = (await cache.getOrLoad(`oembed:${trackId}`, TRACK_TTL_MS, async () => ({
+          title: await fetchTitle(trackId),
+        }))) as { title: string | null };
+        if (!title.title) throw cause;
+        try {
+          const found = await resolveQuery(title.title, {
+            ...options,
+            offset: 0,
+            provider: undefined,
+            providers: options.providers.filter((provider) => provider.info.id !== "spotify"),
+          });
+          if (found.tracks.length === 0) throw cause;
+          return {
+            ...found,
+            notice: `Spotify couldn't confirm this exact track. Showing matches for "${title.title}"`,
+          };
+        } catch {
+          throw cause;
+        }
+      };
+
+      if (!spotify?.isConfigured()) return searchByTitle(unavailable);
+
       // `null` (track not found) is wrapped so that it can be cached as a value.
       let track: Track | null;
       try {
@@ -228,13 +272,14 @@ export async function resolveQuery(raw: string, options: ResolveOptions): Promis
           track: await spotify.getTrack(trackId),
         }))) as { track: Track | null });
       } catch (error) {
-        // Only Spotify can resolve its own links, so say what still works instead.
-        if (isMusicError(error) && (error.code === "PROVIDER_AUTH" || error.code === "PROVIDER_UNAVAILABLE")) {
-          throw new MusicError(error.code, error.message, {
-            publicMessage:
-              "Spotify links can't be looked up right now. Search by song title and artist instead.",
-            cause: error,
-          });
+        if (isMusicError(error) && error.allowsFallback) {
+          return searchByTitle(
+            new MusicError(error.code, error.message, {
+              publicMessage: unavailable.publicMessage,
+              retryAfterSeconds: error.retryAfterSeconds,
+              cause: error,
+            }),
+          );
         }
         throw error;
       }
@@ -253,6 +298,137 @@ export async function resolveQuery(raw: string, options: ResolveOptions): Promis
         nextOffset: null,
         total: 1,
       };
+    }
+    case "deezer-track": {
+      const deezer = options.providers.find((provider) => provider.info.id === "deezer");
+      if (!deezer?.isConfigured()) {
+        throw new MusicError("NOT_CONFIGURED", "Deezer links need the Deezer catalog", {
+          publicMessage: "Deezer links can't be looked up right now. Search by song title and artist instead.",
+        });
+      }
+      const { track } = (await cache.getOrLoad(`track:deezer:${detected.trackId}`, TRACK_TTL_MS, async () => ({
+        track: await deezer.getTrack(detected.trackId),
+      }))) as { track: Track | null };
+      if (!track) {
+        throw new MusicError("NOT_FOUND", `Deezer track ${detected.trackId} not found`, {
+          publicMessage: "That Deezer track couldn't be found. It may have been removed or the link may be incomplete.",
+        });
+      }
+      return {
+        kind: "link-match",
+        query: detected.trackId,
+        provider: deezer.info,
+        tracks: [track],
+        nextOffset: null,
+        total: 1,
+        notice: "Exact match for your Deezer link",
+      };
+    }
+
+    case "title-link": {
+      // These services expose a title but no recording code, so the link
+      // becomes a catalog search and the visitor confirms the recording.
+      const serviceName = TITLE_LINK_SERVICE_NAMES[detected.service];
+      const fetchTitle = options.fetchLinkTitle ?? defaultFetchLinkTitle;
+      const { link } = (await cache.getOrLoad(`link:${detected.url}`, TRACK_TTL_MS, async () => ({
+        link: await fetchTitle(detected.service, detected.url),
+      }))) as { link: LinkTitle | null };
+      const query = link ? linkTitleToQuery(detected.service, link) : "";
+      if (query.length < MIN_TEXT_QUERY_LENGTH) {
+        throw new MusicError("NOT_FOUND", `Could not read ${detected.service} link`, {
+          publicMessage: `That ${serviceName} link couldn't be read. Check it, or search by song title and artist.`,
+        });
+      }
+      const found = await resolveQuery(query, { ...options, offset: 0, provider: undefined });
+      if (found.tracks.length === 0) {
+        throw new MusicError("NOT_FOUND", `No catalog match for ${detected.service} link`, {
+          publicMessage: `No recording matching "${query}" was found. Try searching by song title and artist.`,
+        });
+      }
+      return {
+        ...found,
+        kind: "link-match",
+        notice: `From your ${serviceName} link. Select the correct recording`,
+      };
+    }
+
+    case "apple-music-track": {
+      const lookup = options.lookupAppleTrack ?? defaultLookupAppleTrack;
+      const { song } = (await cache.getOrLoad(
+        `apple:${detected.country}:${detected.trackId}`,
+        TRACK_TTL_MS,
+        async () => ({ song: await lookup(detected.trackId, detected.country) }),
+      )) as { song: AppleTrack | null };
+
+      if (!song) {
+        throw new MusicError("NOT_FOUND", `Apple Music song ${detected.trackId} not found`, {
+          publicMessage:
+            "That Apple Music song couldn't be found. Check the link, or search by song title and artist.",
+        });
+      }
+
+      // Apple's lookup has no ISRC, so the recording is found in a catalog that
+      // does by title and artist, then confirmed by title and length.
+      const primaryArtist = song.artist.split(/,|&| feat\.? /i)[0]?.trim() ?? "";
+      const query = [song.title, primaryArtist].filter(Boolean).join(" ");
+      const available = candidates.filter((provider) => provider.isConfigured());
+      let closest: { provider: MusicProvider; page: SearchPage } | undefined;
+      let failure: MusicError | undefined;
+
+      for (const provider of available) {
+        let page: SearchPage;
+        try {
+          page = (await cache.getOrLoad(
+            `search:${provider.info.id}:0:${query.toLowerCase()}`,
+            SEARCH_TTL_MS,
+            () => provider.searchTracks(query, { offset: 0 }),
+          )) as SearchPage;
+        } catch (error) {
+          if (!isMusicError(error) || !error.allowsFallback) throw error;
+          failure ??= error;
+          continue;
+        }
+        if (page.tracks.length === 0) continue;
+        closest ??= { provider, page };
+
+        const matches = page.tracks.filter((track) => {
+          const sameLength =
+            song.durationMs === null ||
+            track.durationMs === null ||
+            Math.abs(track.durationMs - song.durationMs) <= LENGTH_TOLERANCE_MS;
+          const titleOnly = { ...track, artists: [], album: null };
+          return sameLength && trackSimilarity(song.title, titleOnly) >= CONFIDENT_MATCH;
+        });
+        if (matches.length > 0) {
+          return {
+            kind: "link-match",
+            query,
+            provider: provider.info,
+            tracks: matches,
+            nextOffset: null,
+            total: matches.length,
+            notice: "Matched to your Apple Music link by title, artist and length",
+          };
+        }
+      }
+
+      if (closest) {
+        return {
+          kind: "link-match",
+          query,
+          provider: closest.provider.info,
+          ...closest.page,
+          nextOffset: null,
+          approximate: true,
+          notice: `No exact match for your Apple Music link. Showing the closest results for "${song.title}"`,
+        };
+      }
+      throw (
+        failure ??
+        new MusicError("NOT_FOUND", `No catalog match for Apple Music song ${detected.trackId}`, {
+          publicMessage: `"${song.title}" couldn't be found in the catalog we search.`,
+        })
+      );
     }
   }
 }
