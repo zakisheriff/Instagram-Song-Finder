@@ -10,6 +10,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/unit/**/*.test.{ts,tsx}"],
+    exclude: ["tests/e2e/**", "node_modules/**"],
     setupFiles: ["tests/unit/setup.ts"],
     restoreMocks: true,
     unstubGlobals: true,
