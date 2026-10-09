@@ -7,36 +7,71 @@ const root = new URL("../", import.meta.url);
 const source = new URL("assets/brand/logo.webp", root);
 
 /**
- * The artwork is a rounded "squircle" drawn on an opaque white square. This
- * mask follows that outline (a superellipse, exponent 5, inset a little to
- * drop the anti-aliased white fringe) so the corners become transparent and
- * the logo sits cleanly on any background, such as a dark browser tab.
+ * The artwork is a coloured mark on a white or transparent background. This
+ * removes any white background (pixels close to white become transparent, with
+ * a soft edge so the outline stays smooth), trims the empty margin and centres
+ * the mark on a transparent square.
  */
-function squircleMask(size) {
-  const half = size / 2;
-  const radius = half * 0.985;
-  const points = [];
-  for (let step = 0; step < 720; step += 1) {
-    const angle = (step / 720) * Math.PI * 2;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    const reach = radius / (Math.abs(cos) ** 5 + Math.abs(sin) ** 5) ** (1 / 5);
-    const clamp = (value) => Math.max(0, Math.min(size, value));
-    points.push(`${clamp(half + cos * reach).toFixed(2)},${clamp(half + sin * reach).toFixed(2)}`);
+async function prepareMark() {
+  const { data, info } = await sharp(source.pathname)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  // How far below pure white the darkest channel must be for a pixel to be fully opaque.
+  const SOFT_EDGE = 48;
+  const { width, height } = info;
+  let left = width;
+  let top = height;
+  let right = 0;
+  let bottom = 0;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const offset = (y * width + x) * 4;
+      // Some exports already carry transparency; respect it and only key out white where opaque.
+      const existing = data[offset + 3] / 255;
+      const darkest = Math.min(data[offset], data[offset + 1], data[offset + 2]);
+      const keyed = Math.min(1, (255 - darkest) / SOFT_EDGE);
+      const alpha = existing * keyed;
+      if (existing === 1 && keyed > 0 && keyed < 1) {
+        // Edge pixels are a blend with white; recover the mark's own colour.
+        for (let channel = 0; channel < 3; channel += 1) {
+          const value = (data[offset + channel] - 255 * (1 - alpha)) / alpha;
+          data[offset + channel] = Math.max(0, Math.min(255, Math.round(value)));
+        }
+      }
+      data[offset + 3] = Math.round(alpha * 255);
+      // Track the mark's bounding box, ignoring faint specks.
+      if (alpha > 0.5) {
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+        top = Math.min(top, y);
+        bottom = Math.max(bottom, y);
+      }
+    }
   }
-  return Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><polygon points="${points.join(" ")}" fill="#fff"/></svg>`,
-  );
+
+  const box = { left, top, width: right - left + 1, height: bottom - top + 1 };
+  const cut = await sharp(data, { raw: { width, height, channels: 4 } })
+    .extract(box)
+    .png()
+    .toBuffer();
+
+  const side = Math.max(box.width, box.height);
+  return sharp({
+    create: { width: side, height: side, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+  })
+    .composite([{ input: cut, gravity: "centre" }])
+    .png()
+    .toBuffer();
 }
 
-/** The logo with transparent corners, as a PNG buffer. */
+const mark = await prepareMark();
+
+/** The logo on a transparent square, as a PNG buffer. */
 async function logo(size) {
-  return sharp(source.pathname)
-    .resize(size, size, { kernel: "lanczos3" })
-    .ensureAlpha()
-    .composite([{ input: squircleMask(size), blend: "dest-in" }])
-    .png({ compressionLevel: 9 })
-    .toBuffer();
+  return sharp(mark).resize(size, size, { kernel: "lanczos3" }).png({ compressionLevel: 9 }).toBuffer();
 }
 
 /** The logo centred on an opaque white square, covering `scale` of its width. */
@@ -78,12 +113,9 @@ await save("public/logo.png", await logo(512));
 await save("public/icons/icon-192.png", await logo(192));
 await save("public/icons/icon-512.png", await logo(512));
 // Maskable icons keep the whole logo inside the central safe zone.
-await save("public/icons/icon-maskable-512.png", await onWhite(512, 0.74));
-// iOS applies its own corner mask, so this one stays an opaque square.
-await save(
-  "app/apple-icon.png",
-  await sharp(source.pathname).resize(180, 180).flatten({ background: "#ffffff" }).png().toBuffer(),
-);
+await save("public/icons/icon-maskable-512.png", await onWhite(512, 0.62));
+// iOS has no transparency for home screen icons, so this one sits on white.
+await save("app/apple-icon.png", await onWhite(180, 0.78));
 await save("app/icon.png", await logo(96));
 await save(
   "app/favicon.ico",
