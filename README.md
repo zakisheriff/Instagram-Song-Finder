@@ -1,7 +1,7 @@
 # <div align="center">Instagram Song Finder</div>
 
 <div align="center">
-<strong>Find any song's ISRC and copy it, ready for Instagram music search</strong>
+<strong>Find a song's ISRC by name, voice or music link, and copy it ready for Instagram music search</strong>
 </div>
 
 <br />
@@ -30,7 +30,7 @@
 
 > **"The right recording, not the nearest cover."**
 >
-> Instagram Song Finder turns a song name, an artist, a Spotify link or an ISRC into the exact recording's code.  
+> Instagram Song Finder turns a song name, an artist, an ISRC or a link from your music app into the recording's code.  
 > One click copies `isrc:CODE`, ready to paste into Instagram's music search for Reels and Stories.
 
 ---
@@ -101,7 +101,7 @@ An ISRC identifies **one specific recording**, so searching by code is a precise
   Every response comes from a single catalog. Results from Spotify are marked "Data from Spotify", as its terms require.
 
 - **Spotify Requirements**  
-  The Spotify account that owns the app needs an active Premium subscription, and Development Mode quota is small and shared. Spotify links and URIs can only be resolved through Spotify.
+  The Spotify account that owns the app needs an active Premium subscription, and Development Mode quota is small and shared. When Spotify can't be reached, a pasted Spotify link falls back to a title search, shown as possible matches rather than the exact track.
 
 ---
 
