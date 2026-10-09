@@ -178,7 +178,10 @@ describe("SongFinder", () => {
 
     await user.click(liveRow);
     expect(within(results).getByText("isrc:USUM72412854")).toBeInTheDocument();
-    expect(within(results).queryByText("isrc:USUM72409273")).not.toBeInTheDocument();
+    // The previous panel is removed once its closing animation has finished.
+    await waitFor(() =>
+      expect(within(results).queryByText("isrc:USUM72409273")).not.toBeInTheDocument(),
+    );
 
     await user.click(screen.getByRole("button", { name: "Copy for Instagram" }));
     expect(await navigator.clipboard.readText()).toBe("isrc:USUM72412854");

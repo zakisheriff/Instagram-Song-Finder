@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useCopy } from "@/hooks/useCopy";
 import type { SongSearch } from "@/hooks/useSongSearch";
 import { ResultItem } from "./ResultItem";
@@ -9,6 +10,9 @@ interface SearchResultsProps {
   selectedId: string | null;
   onSelect: (trackId: string) => void;
 }
+
+/** Slightly longer than the CSS transition on `.result__reveal`. */
+const COLLAPSE_MS = 420;
 
 function Skeleton() {
   return (
@@ -38,6 +42,25 @@ function statusText(search: SongSearch): string {
 
 export function SearchResults({ search, selectedId, onSelect }: SearchResultsProps) {
   const { state: copyState, copy } = useCopy();
+
+  // The row being left stays mounted just long enough to animate shut.
+  const [closingId, setClosingId] = useState<string | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    },
+    [],
+  );
+
+  function select(trackId: string) {
+    if (trackId !== selectedId) {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      setClosingId(selectedId);
+      closeTimer.current = setTimeout(() => setClosingId(null), COLLAPSE_MS);
+    }
+    onSelect(trackId);
+  }
   const { status, result } = search;
   const tracks = result?.tracks ?? [];
   const loading = status === "loading";
@@ -103,7 +126,8 @@ export function SearchResults({ search, selectedId, onSelect }: SearchResultsPro
                 track={track}
                 provider={result.provider}
                 selected={track.id === selectedId}
-                onSelect={() => onSelect(track.id)}
+                closing={track.id === closingId && track.id !== selectedId}
+                onSelect={() => select(track.id)}
                 copyState={copyState}
                 onCopy={(text, key) => void copy(text, key)}
                 priority={index < 4}

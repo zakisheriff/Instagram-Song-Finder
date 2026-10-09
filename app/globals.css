@@ -658,8 +658,55 @@ select {
   transform: rotate(180deg);
 }
 
+/*
+ * Smooth open and close for the selected recording. The grid row animates
+ * between 0fr and 1fr, so the panel grows to its natural height without any
+ * measuring; the content fades and settles in slightly behind it.
+ */
+.result__reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.result__reveal.is-open {
+  grid-template-rows: 1fr;
+}
+
+.result__reveal-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .result__detail {
   padding: 4px 12px 16px;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.result__reveal.is-open .result__detail {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.06s;
+}
+
+/* Starting point for a panel that has just been added to the page. */
+@starting-style {
+  .result__reveal.is-open {
+    grid-template-rows: 0fr;
+  }
+
+  .result__reveal.is-open .result__detail {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.result {
+  transition: border-color 0.3s ease;
 }
 
 .result__facts {

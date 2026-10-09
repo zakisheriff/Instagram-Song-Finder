@@ -14,6 +14,8 @@ interface ResultItemProps {
   track: Track;
   provider: ProviderInfo;
   selected: boolean;
+  /** True for the row that was just deselected, while its panel animates shut. */
+  closing?: boolean;
   onSelect: () => void;
   copyState: CopyState;
   onCopy: (text: string, key: string) => void;
@@ -25,6 +27,7 @@ export function ResultItem({
   track,
   provider,
   selected,
+  closing = false,
   onSelect,
   copyState,
   onCopy,
@@ -87,8 +90,15 @@ export function ResultItem({
         <ChevronIcon className="result__chevron" size={16} />
       </button>
 
-      {selected && (
-        <div className="result__detail" id={`${domId}-detail`}>
+      {(selected || closing) && (
+        <div
+          className={`result__reveal${selected ? " is-open" : ""}`}
+          id={`${domId}-detail`}
+          inert={!selected}
+          aria-hidden={!selected}
+        >
+          <div className="result__reveal-inner">
+            <div className="result__detail">
           <dl className="result__facts">
             <dt>Song</dt>
             <dd>{track.title}</dd>
@@ -181,6 +191,8 @@ export function ResultItem({
               {sourceLink && <div className="result__actions">{sourceLink}</div>}
             </>
           )}
+            </div>
+          </div>
         </div>
       )}
     </li>
