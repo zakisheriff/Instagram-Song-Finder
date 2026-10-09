@@ -23,7 +23,7 @@ test.describe("search engine and answer engine readiness", () => {
     await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute("href", /^\/apple-icon\.png/);
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(page.locator("h1")).toHaveCount(1);
-    await expect(page.locator("h1")).toHaveText("Find songs on Instagram by their ISRC code.");
+    await expect(page.locator("h1")).toHaveText("Find the song and use it in your Instagram Story.");
   });
 
   test("explanatory content is in the server-rendered HTML", async ({ request }) => {

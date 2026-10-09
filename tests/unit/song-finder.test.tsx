@@ -55,7 +55,7 @@ const requestedParams = (fetchMock: ReturnType<typeof mockApi>, call = 0) =>
 
 function setup() {
   const user = userEvent.setup();
-  render(<SongFinder headline={<h1>Find songs on Instagram by their ISRC code.</h1>} />);
+  render(<SongFinder headline={<h1>Find the song and use it in your Instagram Story.</h1>} />);
   const input = screen.getByRole("searchbox", { name: "Song name, artist, music link or ISRC" });
   return { user, input };
 }

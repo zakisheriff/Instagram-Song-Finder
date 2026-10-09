@@ -28,9 +28,9 @@ export default function HomePage() {
         <SongFinder
           headline={
             <h1 className="hero__headline" id="hero-headline">
-              <span className="hero__headline-line">Find songs on Instagram by their </span>
+              <span className="hero__headline-line">Find the song and use it in your </span>
               <span className="hero__headline-line">
-                <span className="gradient-text">ISRC code</span>.
+                <span className="gradient-text">Instagram Story</span>.
               </span>
             </h1>
           }
