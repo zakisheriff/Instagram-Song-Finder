@@ -74,6 +74,12 @@ test("on desktop the hero fills the first screen and the guide starts below it",
   const guide = await page.getByRole("heading", { name: "How to use an ISRC code on Instagram" }).boundingBox();
   expect(Math.round(split!.height)).toBeGreaterThanOrEqual(viewportHeight);
   expect(guide!.y).toBeGreaterThanOrEqual(viewportHeight);
+  // The search form sits in the vertical middle of the panel.
+  const first = await page.locator(".panel__heading").boundingBox();
+  const last = await page.locator(".panel__byline").boundingBox();
+  const above = first!.y;
+  const below = viewportHeight - (last!.y + last!.height);
+  expect(Math.abs(above - below)).toBeLessThanOrEqual(16);
   // The dividing rule under the hero is not visible until the visitor scrolls.
   const rule = await page.locator("main > .rule").first().boundingBox();
   expect(rule!.y).toBeGreaterThanOrEqual(viewportHeight);

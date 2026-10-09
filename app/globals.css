@@ -502,9 +502,22 @@ select {
 
 .panel {
   flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
   width: clamp(420px, 41vw, var(--panel-width));
-  padding: clamp(40px, 18.7vh, 171px) clamp(28px, 3.27vw, 52px) 48px;
+  padding: 48px clamp(28px, 3.27vw, 52px);
   background: var(--color-bg);
+}
+
+/*
+ * The form is centred on the first screen, as in the reference. Once results
+ * are showing it is pinned to the top instead, so the search field stays put
+ * while the list below it grows and shrinks.
+ */
+.panel:has(.results) {
+  justify-content: flex-start;
+  padding-top: clamp(40px, 10vh, 96px);
 }
 
 .panel__heading {
@@ -1337,10 +1350,10 @@ select {
     display: inline;
   }
 
-  .panel {
+  .panel,
+  .panel:has(.results) {
     flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
+    justify-content: flex-start;
     width: 100%;
     padding: 0 0 23px;
   }
