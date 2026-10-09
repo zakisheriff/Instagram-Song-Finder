@@ -41,6 +41,12 @@ export default function PrivacyPage() {
         URL, for security and reliability.
       </p>
 
+      <h2>Visitor statistics</h2>
+      <p>
+        The site uses Vercel Web Analytics to count visits and page views. It works without
+        cookies and does not identify individual visitors or follow them across other sites.
+      </p>
+
       <h2>Album artwork</h2>
       <p>
         Cover images load directly from the image servers of Spotify or Deezer. Those services can
