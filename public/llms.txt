@@ -1,21 +1,81 @@
-# Instagram Song Finder
+# Instagram Song Finder by The Atom
 
-> Instagram Song Finder is a free web tool by The Atom that finds the ISRC (International Standard Recording Code) of a song and formats it for Instagram's music search, for example `isrc:USUM72409273`. It is an independent tool and is not affiliated with Instagram, Meta or Spotify.
+> Instagram Song Finder is a free web tool, built and published by The Atom, that finds the ISRC (International Standard Recording Code) of a song and copies it in the form Instagram's music search accepts, for example `isrc:USUM72409273`. It needs no account. It is an independent tool and is not affiliated with, endorsed by or sponsored by Instagram, Meta or Spotify.
 
 - Website: https://instagramsongfinder.theatom.lk/
 - Publisher: The Atom (https://www.theatom.lk)
-- Price: free, no account or sign-in required
-- Input accepted: song title, artist name, keywords, an ISRC with or without the `isrc:` prefix, or a song link from Spotify (including share links and `spotify:track:` URIs), Apple Music, YouTube, YouTube Music, Deezer or SoundCloud
-- Output: matching recordings with title, artist, album, artwork, release date, length and ISRC, plus a one-click copy of `isrc:<CODE>`
-- Data source: the official Spotify Web API where that integration is available; otherwise Deezer's public catalog. Every result is labelled with its source. Codes are never generated or guessed.
+- Price: free, with no sign-up, login or usage limit for normal use
+- Language: English
+- Contact: info@theatom.lk
 
-## Important limitation
+## What it does
 
-An ISRC identifies one sound recording. It does not show whether Instagram has licensed or indexed that recording. Searching Instagram by ISRC is not an officially documented Instagram feature and may vary by account type, region and app version. The site cannot check Instagram availability.
+A visitor identifies one specific recording of a song and gets its ISRC with the `isrc:` prefix already added. Pasting that string into the music search of an Instagram Story or Reel asks Instagram for that exact recording, instead of a cover, remix, live take or sped-up edit that a search by name often returns first.
+
+## Ways to find a song
+
+All of these go into the same search box, which works out what it was given.
+
+- Song title, artist name, both together, part of a title, or keywords
+- Voice: tap the microphone and say the song name (in browsers with built-in speech recognition, such as Chrome and Safari)
+- An ISRC, written plain (`USUM72409273`), hyphenated (`US-UM7-24-09273`) or prefixed (`isrc:USUM72409273`)
+- A song link from a music service:
+  - Spotify track links, share links and `spotify:track:` URIs: the exact recording when Spotify's catalog is reachable, otherwise a title search presented as possible matches
+  - Deezer track links: the exact recording
+  - Apple Music song links: matched by title, artist and length
+  - YouTube and YouTube Music links: the video title is searched and the visitor picks the recording
+  - SoundCloud track links: the track title is searched and the visitor picks the recording
+
+Misspelled queries are tolerated. When nothing matches as typed, the closest results are shown and labelled as approximate.
+
+Not supported: Tidal and Amazon Music links, and links to albums, playlists, artists or podcasts, because an ISRC belongs to a single recording.
+
+## What a result shows
+
+- Title, artists, album, release date and length
+- Official album artwork
+- Labels for distinct versions such as Live, Remastered, Remix, Acoustic and Sped up
+- The ISRC, and the ready-to-paste string `isrc:<CODE>`
+- A button that plays the catalog's official 30-second preview clip, where one exists
+- One-tap copy, and a shortcut that copies the code and opens Instagram
+
+Each recording is listed separately with its own ISRC. Different versions of a song are different recordings and are never merged.
+
+## Where the data comes from
+
+Song metadata and ISRC codes come from the official Spotify Web API where that integration is available, and otherwise from Deezer's public catalog. Apple's public lookup, and the public title information of YouTube and SoundCloud, are used only to identify which song a pasted link refers to. Codes are shown exactly as the catalog reports them. They are never generated, guessed or estimated. When a catalog has no ISRC for a recording, the site says "ISRC unavailable for this recording."
+
+## Important limitations
+
+- An ISRC identifies one sound recording. It does not show whether Instagram has licensed or indexed that recording.
+- Searching Instagram by ISRC is not an officially documented Instagram feature. It may behave differently by account type, region and app version, and a correct code can still return no result.
+- The site cannot check whether a song is available on Instagram. No public Instagram service reports that.
+- A song can be on Spotify or Deezer and missing from Instagram, or the other way round, because each service licenses music separately.
+- Not every recording is in the catalogs searched, so some songs will not be found.
+
+## How to use the code on Instagram
+
+1. Search for the song, say its name, or paste its link.
+2. Select the correct recording, using the details and the preview clip to confirm it.
+3. Copy the `isrc:` string.
+4. Open Instagram and start a Story or a Reel.
+5. Open the music picker and paste the string into its search.
+6. Select the song if Instagram returns the matching recording.
+
+## Facts about ISRC
+
+- ISRC stands for International Standard Recording Code and is defined by ISO 3901.
+- It has 12 characters: a 2-letter prefix, a 3-character registrant code, a 2-digit year and a 5-digit designation.
+- It identifies a recording, not a song. One song usually has several ISRCs, one per recorded version.
+- The same recording normally keeps one ISRC across the services and releases it appears on.
 
 ## Pages
 
-- [Home and search](https://instagramsongfinder.theatom.lk/): the search tool, a seven-step guide to using an ISRC on Instagram, and frequently asked questions
+- [Home and search](https://instagramsongfinder.theatom.lk/): the search tool, a step-by-step guide, the supported link services and frequently asked questions
 - [About](https://instagramsongfinder.theatom.lk/about): what the tool does, who publishes it and where its data comes from
-- [Privacy](https://instagramsongfinder.theatom.lk/privacy): how searches and technical data are handled
+- [Privacy](https://instagramsongfinder.theatom.lk/privacy): how searches, voice input, previews and technical data are handled
 - [Terms of use](https://instagramsongfinder.theatom.lk/terms): conditions for using the service
+
+## Privacy in brief
+
+No accounts and no advertising or tracking cookies. Voice input is turned into text by the visitor's own browser; the site receives the text only and stores no audio. Visits are counted with cookieless analytics.
