@@ -157,9 +157,22 @@ export async function resolveQuery(raw: string, options: ResolveOptions): Promis
       }
 
       // `null` (track not found) is wrapped so that it can be cached as a value.
-      const { track } = (await cache.getOrLoad(`track:spotify:${trackId}`, TRACK_TTL_MS, async () => ({
-        track: await spotify.getTrack(trackId),
-      }))) as { track: Track | null };
+      let track: Track | null;
+      try {
+        ({ track } = (await cache.getOrLoad(`track:spotify:${trackId}`, TRACK_TTL_MS, async () => ({
+          track: await spotify.getTrack(trackId),
+        }))) as { track: Track | null });
+      } catch (error) {
+        // Only Spotify can resolve its own links, so say what still works instead.
+        if (isMusicError(error) && (error.code === "PROVIDER_AUTH" || error.code === "PROVIDER_UNAVAILABLE")) {
+          throw new MusicError(error.code, error.message, {
+            publicMessage:
+              "Spotify links can't be looked up right now. Search by song title and artist instead.",
+            cause: error,
+          });
+        }
+        throw error;
+      }
 
       if (!track) {
         throw new MusicError("NOT_FOUND", `Spotify track ${trackId} not found`, {

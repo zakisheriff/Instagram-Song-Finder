@@ -187,6 +187,17 @@ describe("resolveQuery: Spotify links", () => {
     expect(deezer.searchTracks).not.toHaveBeenCalled();
   });
 
+  it("points to title search when Spotify itself refuses a link lookup", async () => {
+    const spotify = stubProvider("spotify", {
+      getTrack: vi.fn(async () => {
+        throw new MusicError("PROVIDER_AUTH", "Spotify refused the request (403)");
+      }),
+    });
+    await expect(
+      resolveQuery(`spotify:track:${ID}`, { providers: [spotify, stubProvider("deezer")], cache }),
+    ).rejects.toMatchObject({ code: "PROVIDER_AUTH", publicMessage: expect.stringContaining("Search by song title") });
+  });
+
   it("shows a track whose ISRC is missing rather than failing", async () => {
     const spotify = stubProvider("spotify", { getTrack: vi.fn(async () => track({ isrc: null })) });
     const result = await resolveQuery(`spotify:track:${ID}`, { providers: [spotify], cache });
