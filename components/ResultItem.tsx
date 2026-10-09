@@ -5,7 +5,10 @@ import type { CopyState } from "@/hooks/useCopy";
 import { formatArtists, formatDuration, trackMetaLine } from "@/lib/music/format";
 import type { ProviderInfo, Track } from "@/lib/music/types";
 import { formatInstagramIsrc, formatIsrcHyphenated } from "@/lib/search/isrc";
-import { CheckIcon, ChevronIcon, CopyIcon, ExternalIcon, NoteIcon } from "./icons";
+import { CheckIcon, ChevronIcon, ExternalIcon, NoteIcon } from "./icons";
+
+/** Opens the app on phones that have it installed, the website elsewhere. */
+const INSTAGRAM_URL = "https://www.instagram.com/";
 
 interface ResultItemProps {
   track: Track;
@@ -33,9 +36,17 @@ export function ResultItem({
   const instagramCode = track.isrc ? formatInstagramIsrc(track.isrc) : null;
 
   const instagramKey = `${track.id}:instagram`;
-  const rawKey = `${track.id}:raw`;
   const copiedInstagram = copyState?.key === instagramKey;
-  const copiedRaw = copyState?.key === rawKey;
+
+  // Spotify's terms ask for a link back wherever its metadata is shown; other
+  // catalogs don't need one, so no button is offered for them.
+  const sourceLink =
+    provider.id === "spotify" && track.url ? (
+      <a className="button button--gray" href={track.url} target="_blank" rel="noopener noreferrer">
+        <ExternalIcon size={16} />
+        Open in {provider.name}
+      </a>
+    ) : null;
 
   return (
     <li className={`result${selected ? " is-selected" : ""}`}>
@@ -134,35 +145,22 @@ export function ResultItem({
                   )}
                 </button>
 
-                {track.url && (
-                  <a
-                    className="button button--gray"
-                    href={track.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalIcon size={16} />
-                    Open in {provider.name}
-                  </a>
-                )}
-
-                <button
-                  type="button"
-                  className="button button--outline"
-                  onClick={() => onCopy(track.isrc!, rawKey)}
+                {/*
+                  Instagram has no link that pre-fills its music search, so the
+                  closest shortcut is to copy the code and open Instagram.
+                */}
+                <a
+                  className="button button--gray"
+                  href={INSTAGRAM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => onCopy(instagramCode, instagramKey)}
                 >
-                  {copiedRaw && copyState?.ok ? (
-                    <>
-                      <CheckIcon size={16} />
-                      Copied {track.isrc}
-                    </>
-                  ) : (
-                    <>
-                      <CopyIcon size={16} />
-                      Copy ISRC only
-                    </>
-                  )}
-                </button>
+                  <ExternalIcon size={16} />
+                  Copy and open Instagram
+                </a>
+
+                {sourceLink}
               </div>
 
               <p className="result__note">
@@ -180,19 +178,7 @@ export function ResultItem({
                   release that includes one.
                 </p>
               </div>
-              {track.url && (
-                <div className="result__actions">
-                  <a
-                    className="button button--gray"
-                    href={track.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalIcon size={16} />
-                    Open in {provider.name}
-                  </a>
-                </div>
-              )}
+              {sourceLink && <div className="result__actions">{sourceLink}</div>}
             </>
           )}
         </div>

@@ -33,8 +33,12 @@ test("finds a song by title and copies the full isrc: string in one click", asyn
   await expect(region.getByRole("button", { name: /Copied isrc:USUM72409273/ })).toBeVisible();
   expect(await copied()).toEqual(["isrc:USUM72409273"]);
 
-  await region.getByRole("button", { name: "Copy ISRC only" }).click();
-  expect(await copied()).toEqual(["isrc:USUM72409273", "USUM72409273"]);
+  await region.getByRole("link", { name: "Copy and open Instagram" }).evaluate((link) => {
+    link.addEventListener("click", (event) => event.preventDefault());
+  });
+  await region.getByRole("link", { name: "Copy and open Instagram" }).click();
+  expect(await copied()).toEqual(["isrc:USUM72409273", "isrc:USUM72409273"]);
+  await expect(region.getByRole("button", { name: /Copy ISRC only/ })).toHaveCount(0);
 });
 
 test("lets the visitor choose between recordings without merging them", async ({

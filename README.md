@@ -18,7 +18,7 @@ One search box accepts all of the following and works out which one it was given
 | Spotify URI | `spotify:track:2plbrEY59IikOBgBGLjaoe` |
 | ISRC, raw, hyphenated or prefixed | `USUM72409273`, `US-UM7-24-09273`, `isrc:USUM72409273` |
 
-Each matching recording is listed separately with its artwork, artists, album, release date, length, version labels (Live, Remastered, Sped up, …) and its own ISRC. **Copy for Instagram** copies the full `isrc:CODE` string; **Copy ISRC only** copies the bare code. When a catalog has no ISRC for a recording the site says so and never invents one.
+Each matching recording is listed separately with its artwork, artists, album, release date, length, version labels (Live, Remastered, Sped up, …) and its own ISRC. **Copy for Instagram** copies the full `isrc:CODE` string, and **Copy and open Instagram** copies it and opens Instagram (Instagram offers no link that pre-fills its music search, so pasting is still manual). When a catalog has no ISRC for a recording the site says so and never invents one.
 
 ## Stack
 

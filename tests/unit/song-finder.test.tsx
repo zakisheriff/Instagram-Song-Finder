@@ -103,13 +103,35 @@ describe("SongFinder", () => {
     expect(screen.getByText("Copied to clipboard.")).toBeInTheDocument();
   });
 
-  it("copies only the raw code with the secondary button", async () => {
+  it("offers a shortcut that copies the code and opens Instagram", async () => {
     mockApi({ body: success([track()]) });
     const { user, input } = setup();
     await user.type(input, "die with a smile");
 
-    await user.click(await screen.findByRole("button", { name: "Copy ISRC only" }));
-    expect(await navigator.clipboard.readText()).toBe("USUM72409273");
+    const shortcut = await screen.findByRole("link", { name: "Copy and open Instagram" });
+    expect(shortcut).toHaveAttribute("href", "https://www.instagram.com/");
+    expect(shortcut).toHaveAttribute("target", "_blank");
+    await user.click(shortcut);
+    expect(await navigator.clipboard.readText()).toBe("isrc:USUM72409273");
+  });
+
+  it("links back to Spotify but shows no source button for other catalogs", async () => {
+    mockApi({
+      body: success([track({ provider: "deezer", url: "https://www.deezer.com/track/1" })], {
+        provider: { id: "deezer", name: "Deezer" },
+      }),
+    });
+    const { user, input } = setup();
+    await user.type(input, "die with a smile");
+    await screen.findByRole("button", { name: "Copy for Instagram" });
+    expect(screen.queryByRole("link", { name: /Open in/ })).not.toBeInTheDocument();
+  });
+
+  it("tells the visitor when only close matches were found", async () => {
+    mockApi({ body: success([track()], { approximate: true }) });
+    const { user, input } = setup();
+    await user.type(input, "die with a smile zzqq");
+    expect(await screen.findByText("No exact match. Showing the closest results")).toBeInTheDocument();
   });
 
   it("submits immediately on Enter without waiting for the debounce", async () => {

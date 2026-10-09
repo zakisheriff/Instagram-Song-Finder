@@ -52,7 +52,7 @@ export const faqEntries: FaqEntry[] = [
     question: "How do I copy an ISRC for Instagram?",
     answer: [
       "Search for the song, select the correct recording and press Copy for Instagram. That copies the full string including the prefix, for example isrc:USUM72409273, so you can paste it straight into Instagram's music search without editing it.",
-      "If you only need the bare code for another purpose, use Copy ISRC only.",
+      "Copy and open Instagram does the same and then opens Instagram, where you paste the code into the music search yourself.",
     ],
   },
   {
