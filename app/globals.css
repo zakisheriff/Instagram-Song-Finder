@@ -1443,24 +1443,30 @@ select {
     position: static;
     height: auto;
     min-height: 0;
-    padding: clamp(32px, 11vh, 100px) 0 0;
+    /* Clears the top bar (wordmark on the left, pill on the right). */
+    padding: clamp(96px, 17vh, 150px) 0 0;
   }
 
+  /* The site name sits top-left, level with the pill on the right, like a navigation bar. */
   .hero__wordmark {
+    position: absolute;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    left: 16px;
     display: flex;
-    justify-content: center;
-    margin: 36px 0 12px;
+    align-items: center;
+    height: 40px;
+    margin: 0;
     font-family: var(--font-display);
-    font-size: 24px;
+    font-size: 18px;
     font-weight: 600;
-    line-height: 30px;
+    line-height: 1.25;
     letter-spacing: -0.01em;
     color: var(--color-text);
   }
 
   .hero__headline {
     max-width: none;
-    margin-top: 16px;
+    margin-top: 0;
     padding: 0 28px;
     font-family: var(--font-ui);
     font-size: 24px;
@@ -1552,6 +1558,13 @@ select {
   .top-action {
     top: calc(12px + env(safe-area-inset-top, 0px));
     right: 12px;
+    height: 40px;
+    border-radius: 20px;
+  }
+
+  .top-action__label {
+    padding: 0 14px;
+    font-size: 14px;
   }
 
   .tabbar {
@@ -1588,6 +1601,11 @@ select {
 }
 
 @media (max-width: 359px) {
+  .hero__wordmark {
+    left: 12px;
+    font-size: 16px;
+  }
+
   .search {
     margin-left: 20px;
     margin-right: 20px;

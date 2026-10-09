@@ -105,6 +105,21 @@ test("on desktop the logo stays with the hero while the results scroll", async (
   expect(Math.round(after.art!.y)).toBe(Math.round(before.art!.y));
 });
 
+test("on phones the site name and the pill share a top bar without touching", async ({ page }) => {
+  test.skip(!isPhoneLayout(page), "phone layout only");
+  await page.goto("/");
+  const name = await page.locator(".hero__wordmark").boundingBox();
+  const pill = await page.locator(".top-action").boundingBox();
+  const headline = await page.locator(".hero__headline").boundingBox();
+
+  // Left and right of the same row.
+  expect(name!.x).toBeLessThan(40);
+  expect(Math.abs(name!.y + name!.height / 2 - (pill!.y + pill!.height / 2))).toBeLessThanOrEqual(4);
+  expect(name!.x + name!.width).toBeLessThan(pill!.x - 4);
+  // The headline starts below the bar.
+  expect(headline!.y).toBeGreaterThan(name!.y + name!.height);
+});
+
 test("on phones the landing fills the first screen and the guide starts below it", async ({
   page,
 }) => {
