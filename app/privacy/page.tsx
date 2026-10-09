@@ -61,6 +61,12 @@ export default function PrivacyPage() {
         see the usual connection details of your browser when an image loads.
       </p>
 
+      <h2>Song previews</h2>
+      <p>
+        Preview clips play only when you press Play, and stream directly from the music
+        catalog&apos;s own servers, the same way cover images do.
+      </p>
+
       <h2>Clipboard</h2>
       <p>
         The site writes to your clipboard only when you press a copy button. It never reads your

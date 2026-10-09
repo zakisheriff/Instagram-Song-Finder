@@ -32,6 +32,7 @@ interface SpotifyTrack {
   name?: string;
   type?: string;
   explicit?: boolean;
+  preview_url?: string | null;
   duration_ms?: number;
   external_ids?: { isrc?: string } | null;
   external_urls?: { spotify?: string } | null;
@@ -85,6 +86,11 @@ export function mapSpotifyTrack(raw: SpotifyTrack | null | undefined): Track | n
     durationMs: typeof raw.duration_ms === "number" ? raw.duration_ms : null,
     releaseDate: raw.album?.release_date ?? null,
     explicit: typeof raw.explicit === "boolean" ? raw.explicit : null,
+    // Spotify has withdrawn previews for most apps; kept for the cases where one is still sent.
+    previewUrl:
+      typeof raw.preview_url === "string" && raw.preview_url.startsWith("https://")
+        ? raw.preview_url
+        : null,
     url: raw.external_urls?.spotify ?? `https://open.spotify.com/track/${raw.id}`,
     versionTags: detectVersionTags(raw.name),
   };

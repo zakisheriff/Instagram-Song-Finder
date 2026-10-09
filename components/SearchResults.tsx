@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useCopy } from "@/hooks/useCopy";
 import type { SongSearch } from "@/hooks/useSongSearch";
+import type { Track } from "@/lib/music/types";
 import { ResultItem } from "./ResultItem";
 
 interface SearchResultsProps {
@@ -53,8 +54,50 @@ export function SearchResults({ search, selectedId, onSelect }: SearchResultsPro
     [],
   );
 
+  // One shared player, so only one preview clip is ever playing.
+  const player = useRef<HTMLAudioElement | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [failedPreviewId, setFailedPreviewId] = useState<string | null>(null);
+  const tracksNow = search.result?.tracks ?? [];
+  const activePlayingId = tracksNow.some((track) => track.id === playingId) ? playingId : null;
+
+  // Silence the clip when its recording leaves the list or the page is left.
+  useEffect(() => {
+    if (activePlayingId === null) player.current?.pause();
+  }, [activePlayingId]);
+  useEffect(() => () => player.current?.pause(), []);
+
+  function stopPreview() {
+    player.current?.pause();
+    setPlayingId(null);
+  }
+
+  function togglePreview(track: Track) {
+    if (activePlayingId === track.id) {
+      stopPreview();
+      return;
+    }
+    if (!track.previewUrl) return;
+    player.current ??= new Audio();
+    const audio = player.current;
+    audio.onended = () => setPlayingId(null);
+    audio.onerror = () => {
+      setPlayingId(null);
+      setFailedPreviewId(track.id);
+    };
+    audio.src = track.previewUrl;
+    setFailedPreviewId(null);
+    setPlayingId(track.id);
+    // Preview links expire after a while; a refused or blocked play is reported, not ignored.
+    void audio.play().catch(() => {
+      setPlayingId(null);
+      setFailedPreviewId(track.id);
+    });
+  }
+
   function select(trackId: string) {
     if (trackId !== selectedId) {
+      stopPreview();
       if (closeTimer.current) clearTimeout(closeTimer.current);
       setClosingId(selectedId);
       closeTimer.current = setTimeout(() => setClosingId(null), COLLAPSE_MS);
@@ -133,6 +176,9 @@ export function SearchResults({ search, selectedId, onSelect }: SearchResultsPro
                 onSelect={() => select(track.id)}
                 copyState={copyState}
                 onCopy={(text, key) => void copy(text, key)}
+                playing={track.id === activePlayingId}
+                previewFailed={track.id === failedPreviewId}
+                onTogglePreview={() => togglePreview(track)}
                 priority={index < 4}
               />
             ))}

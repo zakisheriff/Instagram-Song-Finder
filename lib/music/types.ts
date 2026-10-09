@@ -29,6 +29,8 @@ export interface Track {
   /** As precise as the provider reports: `YYYY`, `YYYY-MM` or `YYYY-MM-DD`. */
   releaseDate: string | null;
   explicit: boolean | null;
+  /** Short official audio preview clip from the provider, when it offers one. */
+  previewUrl: string | null;
   /** Link to the recording on the provider's own site. */
   url: string | null;
   /** Labels such as "Live" or "Remastered" that distinguish one recording from another. */

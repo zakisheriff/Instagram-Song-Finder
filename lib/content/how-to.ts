@@ -12,7 +12,7 @@ export const howToSteps: HowToStep[] = [
   {
     title: "Select the correct recording",
     detail:
-      "Check the artist, album, year and length. Live, remastered, remixed and sped-up versions are separate recordings with separate codes.",
+      "Check the artist, album, year and length, or press Play preview to hear a short clip. Live, remastered, remixed and sped-up versions are separate recordings with separate codes.",
   },
   {
     title: "Copy the generated isrc: string",

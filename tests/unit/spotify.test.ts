@@ -86,6 +86,7 @@ describe("mapSpotifyTrack", () => {
       durationMs: 251667,
       releaseDate: "2024-08-16",
       explicit: false,
+      previewUrl: null,
       url: "https://open.spotify.com/track/2plbrEY59IikOBgBGLjaoe",
       versionTags: [],
     });

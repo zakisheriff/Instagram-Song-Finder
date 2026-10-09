@@ -95,6 +95,18 @@ export const NoteIcon = (props: IconProps) => (
   </svg>
 );
 
+export const PlayIcon = (props: IconProps) => (
+  <svg {...base(props)}>
+    <path d="M7 4.5v15l12-7.5z" fill="currentColor" />
+  </svg>
+);
+
+export const PauseIcon = (props: IconProps) => (
+  <svg {...base(props)}>
+    <path d="M8 5v14M16 5v14" strokeWidth={3} />
+  </svg>
+);
+
 export const MicIcon = (props: IconProps) => (
   <svg {...base(props)}>
     <rect x="9" y="2.5" width="6" height="12" rx="3" />

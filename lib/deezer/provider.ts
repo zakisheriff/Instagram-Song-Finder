@@ -28,6 +28,7 @@ interface DeezerTrack extends DeezerError {
   title?: string;
   isrc?: string;
   link?: string;
+  preview?: string;
   duration?: number;
   release_date?: string;
   explicit_lyrics?: boolean;
@@ -67,6 +68,7 @@ export function mapDeezerTrack(raw: DeezerTrack | null | undefined): Track | nul
     releaseDate:
       raw.release_date && raw.release_date !== "0000-00-00" ? raw.release_date : null,
     explicit: typeof raw.explicit_lyrics === "boolean" ? raw.explicit_lyrics : null,
+    previewUrl: httpsOrNull(raw.preview),
     url: httpsOrNull(raw.link) ?? `https://www.deezer.com/track/${raw.id}`,
     versionTags: detectVersionTags(raw.title),
   };

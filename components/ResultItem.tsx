@@ -5,7 +5,7 @@ import type { CopyState } from "@/hooks/useCopy";
 import { formatArtists, formatDuration, trackMetaLine } from "@/lib/music/format";
 import type { ProviderInfo, Track } from "@/lib/music/types";
 import { formatInstagramIsrc, formatIsrcHyphenated } from "@/lib/search/isrc";
-import { CheckIcon, ChevronIcon, ExternalIcon, NoteIcon } from "./icons";
+import { CheckIcon, ChevronIcon, ExternalIcon, NoteIcon, PauseIcon, PlayIcon } from "./icons";
 
 /** Opens the app on phones that have it installed, the website elsewhere. */
 const INSTAGRAM_URL = "https://www.instagram.com/";
@@ -19,6 +19,11 @@ interface ResultItemProps {
   onSelect: () => void;
   copyState: CopyState;
   onCopy: (text: string, key: string) => void;
+  /** True while this recording's preview clip is playing. */
+  playing?: boolean;
+  /** True when this recording's preview clip could not be played. */
+  previewFailed?: boolean;
+  onTogglePreview?: () => void;
   /** Artwork for the first rows is fetched eagerly; the rest load lazily. */
   priority?: boolean;
 }
@@ -31,6 +36,9 @@ export function ResultItem({
   onSelect,
   copyState,
   onCopy,
+  playing = false,
+  previewFailed = false,
+  onTogglePreview,
   priority = false,
 }: ResultItemProps) {
   const domId = `result-${track.id.replace(/[^a-zA-Z0-9]/g, "-")}`;
@@ -40,6 +48,27 @@ export function ResultItem({
 
   const instagramKey = `${track.id}:instagram`;
   const copiedInstagram = copyState?.key === instagramKey;
+
+  // A short official clip from the catalog, so the visitor can confirm it's the right recording.
+  const preview =
+    track.previewUrl && onTogglePreview ? (
+      <div className="preview">
+        <button
+          type="button"
+          className={`button button--gray${playing ? " is-playing" : ""}`}
+          aria-pressed={playing}
+          onClick={onTogglePreview}
+        >
+          {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
+          {playing ? "Pause preview" : "Play preview"}
+        </button>
+        <p className="preview__caption" role={previewFailed ? "alert" : undefined}>
+          {previewFailed
+            ? "This preview couldn't be played. Search again to refresh it."
+            : `30-second preview from ${provider.name}`}
+        </p>
+      </div>
+    ) : null;
 
   // Spotify's terms ask for a link back wherever its metadata is shown; other
   // catalogs don't need one, so no button is offered for them.
@@ -142,6 +171,8 @@ export function ResultItem({
               </button>
 
               <div className="result__actions">
+                {preview}
+
                 <button
                   type="button"
                   className={`button button--primary${copiedInstagram && copyState?.ok ? " is-done" : ""}`}
@@ -187,7 +218,12 @@ export function ResultItem({
                   release that includes one.
                 </p>
               </div>
-              {sourceLink && <div className="result__actions">{sourceLink}</div>}
+              {(preview || sourceLink) && (
+                <div className="result__actions">
+                  {preview}
+                  {sourceLink}
+                </div>
+              )}
             </>
           )}
             </div>

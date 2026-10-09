@@ -46,6 +46,14 @@ describe("mapDeezerTrack", () => {
     expect(track?.releaseDate).toBe("2024-08-16");
   });
 
+  it("passes on the official preview clip only when it is served over https", () => {
+    expect(mapDeezerTrack(deezerTrack({ preview: "https://cdnt-preview.dzcdn.net/a.mp3" }))?.previewUrl).toBe(
+      "https://cdnt-preview.dzcdn.net/a.mp3",
+    );
+    expect(mapDeezerTrack(deezerTrack({ preview: "http://insecure.example/a.mp3" }))?.previewUrl).toBeNull();
+    expect(mapDeezerTrack(deezerTrack())?.previewUrl).toBeNull();
+  });
+
   it("keeps a missing ISRC as null", () => {
     expect(mapDeezerTrack(deezerTrack({ isrc: "" }))?.isrc).toBeNull();
     expect(mapDeezerTrack(deezerTrack({ isrc: undefined }))?.isrc).toBeNull();

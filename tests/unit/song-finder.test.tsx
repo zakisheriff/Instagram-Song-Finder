@@ -289,6 +289,73 @@ describe("SongFinder", () => {
   });
 });
 
+describe("song preview", () => {
+  class FakeAudio {
+    static last: FakeAudio | null = null;
+    src = "";
+    onended: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    play = vi.fn(() => Promise.resolve());
+    pause = vi.fn();
+    constructor() {
+      FakeAudio.last = this;
+    }
+  }
+  const CLIP = "https://cdnt-preview.dzcdn.net/clip.mp3";
+  const withClip = () =>
+    success([track({ provider: "deezer", previewUrl: CLIP })], { provider: { id: "deezer", name: "Deezer" } });
+
+  it("plays and pauses the catalog's preview clip, with attribution", async () => {
+    vi.stubGlobal("Audio", FakeAudio);
+    mockApi({ body: withClip() });
+    const { user, input } = setup();
+    await user.type(input, "die with a smile");
+
+    await user.click(await screen.findByRole("button", { name: "Play preview" }));
+    expect(FakeAudio.last!.src).toBe(CLIP);
+    expect(FakeAudio.last!.play).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("30-second preview from Deezer")).toBeInTheDocument();
+
+    await user.click(await screen.findByRole("button", { name: "Pause preview" }));
+    expect(FakeAudio.last!.pause).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Play preview" })).toBeInTheDocument();
+  });
+
+  it("returns to Play when the clip finishes", async () => {
+    vi.stubGlobal("Audio", FakeAudio);
+    mockApi({ body: withClip() });
+    const { user, input } = setup();
+    await user.type(input, "die with a smile");
+    await user.click(await screen.findByRole("button", { name: "Play preview" }));
+    await screen.findByRole("button", { name: "Pause preview" });
+    act(() => FakeAudio.last!.onended?.());
+    expect(screen.getByRole("button", { name: "Play preview" })).toBeInTheDocument();
+  });
+
+  it("says so when a clip can't be played", async () => {
+    vi.stubGlobal(
+      "Audio",
+      class extends FakeAudio {
+        play = vi.fn(() => Promise.reject(new Error("expired")));
+      },
+    );
+    mockApi({ body: withClip() });
+    const { user, input } = setup();
+    await user.type(input, "die with a smile");
+    await user.click(await screen.findByRole("button", { name: "Play preview" }));
+    expect(await screen.findByText(/preview couldn't be played/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Play preview" })).toBeInTheDocument();
+  });
+
+  it("offers no preview button when the catalog has no clip", async () => {
+    mockApi({ body: success([track()]) });
+    const { user, input } = setup();
+    await user.type(input, "die with a smile");
+    await screen.findByRole("button", { name: "Copy for Instagram" });
+    expect(screen.queryByRole("button", { name: "Play preview" })).not.toBeInTheDocument();
+  });
+});
+
 describe("voice search", () => {
   class FakeRecognition {
     static last: FakeRecognition | null = null;

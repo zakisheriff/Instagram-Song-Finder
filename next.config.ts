@@ -16,6 +16,8 @@ const contentSecurityPolicy = [
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${ARTWORK_HOSTS.join(" ")}`,
+  // Short preview clips are streamed straight from the catalogs' own servers.
+  "media-src 'self' https://*.dzcdn.net https://p.scdn.co",
   "font-src 'self'",
   "connect-src 'self'",
   "manifest-src 'self'",

@@ -243,6 +243,8 @@ npm run test:e2e
 ✅ **Search As You Type** — Debounced, cancellable, with loading and error states  
 ✅ **Typo Tolerance** — Misspellings still find the right song  
 ✅ **One-Click Copy** — Copies the full `isrc:CODE` string  
+✅ **Song Preview** — Plays the catalog's official 30-second clip so you can confirm the recording  
+✅ **Voice Search** — Tap the microphone and say the song name  
 ✅ **Copy and Open Instagram** — Copies the code, then opens Instagram  
 ✅ **Version Labels** — Live, Remastered, Remix, Sped up and more  
 ✅ **No Account** — No login, no tracking cookies  
