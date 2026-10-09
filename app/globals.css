@@ -197,6 +197,32 @@ select {
   display: block;
   padding: 6px;
   border-radius: 16px;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+
+/*
+ * Site name lockup: wordmark drawing + "Song Finder". The drawing is sized in
+ * em so its capital height and baseline match the text beside it at any size
+ * (the artwork is 600 x 150 units, capitals 98 units tall, baseline at 106).
+ */
+.lockup {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.32em;
+  white-space: nowrap;
+}
+
+.lockup__mark {
+  position: relative;
+  top: 0.312em;
+  flex: none;
+  width: 4.286em;
+  height: 1.071em;
 }
 
 .hero__inner {
@@ -1185,12 +1211,13 @@ select {
 
 .subpage__logo {
   display: inline-flex;
-  align-items: center;
-  gap: 12px;
   padding: 6px;
   border-radius: 16px;
-  font-size: 17px;
+  font-family: var(--font-display);
+  font-size: 22px;
   font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
 .subpage__back {
@@ -1290,8 +1317,7 @@ select {
 
   .hero__wordmark {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    justify-content: center;
     margin: 36px 0 12px;
     font-family: var(--font-display);
     font-size: 24px;

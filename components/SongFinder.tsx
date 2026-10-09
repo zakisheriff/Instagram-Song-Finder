@@ -6,10 +6,10 @@ import { useSongSearch } from "@/hooks/useSongSearch";
 import { SEARCH_INPUT_ID } from "@/lib/search/constants";
 import { MAX_QUERY_LENGTH } from "@/lib/search/detect";
 import { site } from "@/lib/site";
-import { BrandMark } from "./BrandMark";
 import { HeroCollage } from "./HeroCollage";
 import { CloseIcon } from "./icons";
 import { SearchResults } from "./SearchResults";
+import { SiteLockup } from "./SiteLockup";
 
 
 interface SongFinderProps {
@@ -39,12 +39,11 @@ export function SongFinder({ headline }: SongFinderProps) {
     <div className="split">
       <section className="hero" aria-labelledby="hero-headline">
         <Link className="hero__logo" href="/" aria-label={`${site.name} home`}>
-          <BrandMark size={60} />
+          <SiteLockup />
         </Link>
         <div className="hero__inner">
           <p className="hero__wordmark">
-            <BrandMark size={28} />
-            {site.name}
+            <SiteLockup />
           </p>
           {headline}
           <HeroCollage track={selected} />

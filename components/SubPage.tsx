@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { site } from "@/lib/site";
-import { BrandMark } from "./BrandMark";
 import { MobileTabBar } from "./MobileTabBar";
 import { SiteFooter } from "./SiteFooter";
+import { SiteLockup } from "./SiteLockup";
 
 interface SubPageProps {
   title: string;
@@ -16,9 +16,8 @@ export function SubPage({ title, lead, children }: SubPageProps) {
   return (
     <div className="page">
       <header className="subpage__header">
-        <Link className="subpage__logo" href="/">
-          <BrandMark size={36} />
-          {site.name}
+        <Link className="subpage__logo" href="/" aria-label={`${site.name} home`}>
+          <SiteLockup />
         </Link>
       </header>
       <main id="main" className="content prose">

@@ -186,9 +186,10 @@ The built-in rate limiter keeps its counters in server memory, so on serverless 
 
 The interface reproduces the layout, spacing, colours, type scale and component shapes recorded in the supplied reference capture (`styles/layout.json` for desktop, `styles/layout.mobile.json` for phones): the two-column hero and form panel, 60px fields with a 16px radius and floating label, 44px pill buttons in three styles, the footer link row, and on phones the centred landing with the bottom tab bar.
 
-Three kinds of asset from the capture are deliberately not used, because they belong to third parties:
+The site name is shown as a lockup: the Instagram wordmark from the capture followed by "Song Finder" (`components/SiteLockup.tsx`). The wordmark is a trademark of Meta Platforms, Inc. Meta's brand guidelines restrict using its marks inside another product's name or logo, so the owner of this site is responsible for that use; replacing the drawing with plain text is a one-component change.
 
-- the Instagram and Meta logos (replaced by this site's own mark and "from The Atom"),
+Two kinds of asset from the capture are not used, because they belong to third parties:
+
 - Meta's proprietary typefaces (the reference's own system-font fallback is used for the interface and Figtree for the headline),
 - the photographs in the hero (the fanned cards are rebuilt in CSS and show the selected song's artwork).
 
