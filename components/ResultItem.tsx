@@ -128,14 +128,17 @@ export function ResultItem({
 
           {instagramCode && track.isrc ? (
             <>
-              <div className="code">
-                <span className="code__label" id={`${domId}-code-label`}>
-                  Copy for Instagram
+              <button
+                type="button"
+                className="code"
+                aria-label={`Copy code ${instagramCode}`}
+                onClick={() => onCopy(instagramCode, instagramKey)}
+              >
+                <span className="code__label">
+                  {copiedInstagram && copyState?.ok ? "Copied to clipboard" : "Tap to copy for Instagram"}
                 </span>
-                <span className="code__value" aria-labelledby={`${domId}-code-label`}>
-                  {instagramCode}
-                </span>
-              </div>
+                <span className="code__value">{instagramCode}</span>
+              </button>
 
               <div className="result__actions">
                 <button
@@ -172,11 +175,6 @@ export function ResultItem({
 
                 {sourceLink}
               </div>
-
-              <p className="result__note">
-                Paste the code into Instagram&apos;s music search. An ISRC identifies this exact
-                recording, but it doesn&apos;t guarantee the song is available on Instagram.
-              </p>
             </>
           ) : (
             <>

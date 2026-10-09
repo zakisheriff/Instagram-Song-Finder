@@ -103,6 +103,16 @@ describe("SongFinder", () => {
     expect(screen.getByText("Copied to clipboard.")).toBeInTheDocument();
   });
 
+  it("copies the code when the code box itself is pressed", async () => {
+    mockApi({ body: success([track()]) });
+    const { user, input } = setup();
+    await user.type(input, "die with a smile");
+
+    await user.click(await screen.findByRole("button", { name: "Copy code isrc:USUM72409273" }));
+    expect(await navigator.clipboard.readText()).toBe("isrc:USUM72409273");
+    expect(await screen.findByText("Copied to clipboard")).toBeInTheDocument();
+  });
+
   it("offers a shortcut that copies the code and opens Instagram", async () => {
     mockApi({ body: success([track()]) });
     const { user, input } = setup();
