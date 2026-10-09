@@ -151,6 +151,24 @@ test("the tab bar highlights the tab for what is on screen", async ({ page }) =>
   await expect.poll(activeTabs).toEqual(["About"]);
 });
 
+test("the top-right pill links to GitHub, then becomes Try now past the hero", async ({ page }) => {
+  await page.goto("/");
+  const star = page.getByRole("link", { name: "Star on GitHub" });
+  await expect(star).toBeVisible();
+  await expect(star).toHaveAttribute("href", "https://github.com/zakisheriff/Instagram-Song-Finder");
+  await expect(page.getByRole("button", { name: "Try now" })).toHaveCount(0);
+
+  await page.locator("#faq").scrollIntoViewIfNeeded();
+  const tryNow = page.getByRole("button", { name: "Try now" });
+  await expect(tryNow).toBeVisible();
+  await expect(star).toHaveCount(0);
+
+  await tryNow.click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(5);
+  await expect(searchBox(page)).toBeFocused();
+  await expect(star).toBeVisible();
+});
+
 test("matches the reference field and button metrics", async ({ page }) => {
   await page.goto("/");
   const field = await page.locator(".field").boundingBox();

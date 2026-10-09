@@ -22,6 +22,7 @@ export const site = {
     "Instagram Reels Song Finder",
     "Instagram Story Music Finder",
   ],
+  repository: "https://github.com/zakisheriff/Instagram-Song-Finder",
   publisher: {
     name: "The Atom",
     url: "https://www.theatom.lk",

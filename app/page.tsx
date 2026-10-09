@@ -6,6 +6,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { MobileTabBar } from "@/components/MobileTabBar";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SongFinder } from "@/components/SongFinder";
+import { TopAction } from "@/components/TopAction";
 import { SEARCH_INPUT_ID } from "@/lib/search/constants";
 import { pageMetadata } from "@/lib/seo/metadata";
 import { homeGraph } from "@/lib/seo/structured-data";
@@ -21,6 +22,7 @@ export default function HomePage() {
   return (
     <div className="page">
       <JsonLd data={homeGraph()} />
+      <TopAction searchInputId={SEARCH_INPUT_ID} />
       <main id="main">
         <SongFinder
           headline={

@@ -1051,6 +1051,55 @@ select {
   margin: 32px auto 0;
 }
 
+/* ---------- Top-right action ---------- */
+
+.top-action {
+  position: fixed;
+  top: 40px;
+  right: 40px;
+  z-index: 20;
+}
+
+.top-action__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 22px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 19px;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  animation: top-action-in 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.top-action__button:hover {
+  background: var(--color-surface);
+}
+
+.top-action__button--try {
+  border-color: var(--color-blue);
+  background: var(--color-blue);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 100, 224, 0.28);
+}
+
+.top-action__button--try:hover {
+  background: rgb(0, 88, 198);
+}
+
+@keyframes top-action-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+}
+
 /* ---------- Footer ---------- */
 
 .footer {
@@ -1206,6 +1255,11 @@ select {
 
   .subpage__back {
     max-width: none;
+  }
+
+  .top-action {
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: 12px;
   }
 
   .tabbar {
