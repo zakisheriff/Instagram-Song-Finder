@@ -41,6 +41,17 @@
   box-sizing: border-box;
 }
 
+/*
+ * Phones flash a grey box over anything tappable (links, labels, the search
+ * field) while it is pressed. Every control here has its own pressed and
+ * focus styling, so that default flash is switched off everywhere.
+ */
+*,
+*::before,
+*::after {
+  -webkit-tap-highlight-color: transparent;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -394,9 +405,11 @@ select {
   color: var(--color-text-secondary);
 }
 
-.field__action:hover {
-  background: var(--color-surface);
-  color: var(--color-text);
+@media (hover: hover) {
+  .field__action:hover {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
 }
 
 /* Room for the microphone, so the floating label never runs underneath it. */
@@ -463,8 +476,10 @@ select {
   pointer-events: none;
 }
 
-.button:hover::after {
-  opacity: 0.05;
+@media (hover: hover) {
+  .button:hover::after {
+    opacity: 0.05;
+  }
 }
 
 .button:active::after {
@@ -601,8 +616,10 @@ select {
   text-align: left;
 }
 
-.result:not(.is-selected) .result__row:hover {
-  background: var(--color-surface);
+@media (hover: hover) {
+  .result:not(.is-selected) .result__row:hover {
+    background: var(--color-surface);
+  }
 }
 
 .result__art {
@@ -767,9 +784,11 @@ select {
     background-color 0.2s ease;
 }
 
-.code:hover {
-  border-color: var(--color-border-strong);
-  background: var(--color-surface);
+@media (hover: hover) {
+  .code:hover {
+    border-color: var(--color-border-strong);
+    background: var(--color-surface);
+  }
 }
 
 .code:active {
@@ -1271,12 +1290,14 @@ select {
   box-shadow: 0 4px 14px rgba(0, 100, 224, 0.28);
 }
 
-.top-action:hover {
-  background: var(--color-surface);
-}
+@media (hover: hover) {
+  .top-action:hover {
+    background: var(--color-surface);
+  }
 
-.top-action.is-try:hover {
-  background: rgb(0, 88, 198);
+  .top-action.is-try:hover {
+    background: rgb(0, 88, 198);
+  }
 }
 
 .top-action__label {

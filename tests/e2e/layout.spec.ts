@@ -232,6 +232,20 @@ test("the voice button sits inside the field without covering its label", async 
   expect(await label.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
 });
 
+test("tapping controls never shows the default grey tap box", async ({ page }) => {
+  await page.goto("/");
+  const colours = await page.evaluate(() =>
+    Array.from(document.querySelectorAll("a, button, input, label, .field")).map(
+      (node) => getComputedStyle(node).getPropertyValue("-webkit-tap-highlight-color"),
+    ),
+  );
+  expect(colours.length).toBeGreaterThan(5);
+  for (const colour of colours) {
+    // Browsers without the property report an empty string.
+    expect(["", "rgba(0, 0, 0, 0)", "transparent"]).toContain(colour);
+  }
+});
+
 test("matches the reference field and button metrics", async ({ page }) => {
   await page.goto("/");
   const field = await page.locator(".field").boundingBox();
