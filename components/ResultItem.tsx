@@ -195,13 +195,12 @@ export function ResultItem({
                   closest shortcut is to copy the code and open Instagram.
                 */}
                 <a
-                  className="button button--gray"
+                  className="button button--outline"
                   href={INSTAGRAM_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => onCopy(instagramCode, instagramKey)}
                 >
-                  <ExternalIcon size={16} />
                   Copy and open Instagram
                 </a>
 
