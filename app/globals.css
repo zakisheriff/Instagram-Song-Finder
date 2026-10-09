@@ -1047,13 +1047,6 @@ select {
   text-align: center;
 }
 
-.footer__disclaimer {
-  max-width: 640px;
-  margin: 12px auto 0;
-  text-align: center;
-  text-wrap: balance;
-}
-
 /* ---------- Mobile tab bar ---------- */
 
 .tabbar {

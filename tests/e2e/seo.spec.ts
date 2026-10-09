@@ -34,10 +34,11 @@ test.describe("search engine and answer engine readiness", () => {
       "What is an ISRC?",
       "Does every Spotify song exist on Instagram?",
       "Select the correct recording",
-      "not affiliated with",
     ]) {
       expect(html).toContain(text);
     }
+    // The independence statement lives on the About page.
+    expect(await (await request.get("/about")).text()).toContain("not affiliated with");
   });
 
   test("structured data is valid JSON-LD with the expected entities", async ({ page }) => {

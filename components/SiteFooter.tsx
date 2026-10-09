@@ -35,7 +35,6 @@ export function SiteFooter() {
           © {site.copyrightYear} {site.name} by {site.publisher.name}
         </span>
       </p>
-      <p className="footer__disclaimer">{site.disclaimer}</p>
     </footer>
   );
 }
