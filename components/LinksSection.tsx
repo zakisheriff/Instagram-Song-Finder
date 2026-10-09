@@ -4,11 +4,11 @@ export function LinksSection() {
   return (
     <section className="content content--screen" id="supported-links" aria-labelledby="links-title">
       <h2 className="content__title" id="links-title">
-        Paste a link from your music app
+        Find music by name or link
       </h2>
       <p className="content__lead">
-        Already listening to the song? Copy its link and paste it into the search box. There is no
-        need to type the title.
+        Type the song name, artist, or both to find the matching recording and its ISRC. Links from
+        the supported music apps below work too.
       </p>
 
       <ul className="cards">
