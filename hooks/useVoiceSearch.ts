@@ -64,8 +64,10 @@ const LANGUAGE_ERRORS = new Set(["service-not-allowed", "language-not-supported"
 
 /** Longest the microphone stays open waiting for speech. */
 const MAX_LISTEN_MS = 10_000;
-/** How long to wait for the browser to confirm a session has ended before forcing it. */
-const END_GRACE_MS = 1_200;
+/** How long a finished session is given to close by itself before it is asked to stop. */
+const NATURAL_END_MS = 4_000;
+/** How long to wait after asking before giving up on a session that never reports its end. */
+const STOP_GRACE_MS = 3_000;
 
 const ERROR_MESSAGES: Record<string, string> = {
   "not-allowed": "Microphone access is blocked. Allow it in your browser settings and try again.",
@@ -77,6 +79,8 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 const GENERIC_ERROR = "Voice search didn't work. Tap the microphone to try again, or type the song name.";
+const STUCK_ERROR =
+  "Voice search has stopped hearing you. Reload the page to use it again, or type the song name.";
 
 /** Browsers often add a full stop or question mark to a spoken phrase; a song search doesn't want it. */
 function tidy(transcript: string): string {
@@ -103,41 +107,58 @@ export interface VoiceSearch {
   stop: () => void;
 }
 
+/** Everything about one tap-to-speak attempt. */
+interface Session {
+  recognition: Recognition;
+  /** Which tap of the microphone this session belongs to. */
+  tap: number;
+  heard: string;
+  delivered: boolean;
+  /** True once the browser has reported the session over. */
+  ended: boolean;
+  /** Set when the session failed in a way that should surface as a message. */
+  failure: string | null;
+  /** True when the next language should be tried as soon as this session has closed. */
+  retryNextLanguage: boolean;
+}
+
 /**
  * Voice input for the search box, using the speech recognition built into the
  * browser. Nothing is recorded or stored by this site: the browser turns
  * speech into text and hands the text back.
  *
- * Reliability notes, because browsers (Safari in particular) are strict here:
- * - A single recogniser is created once and reused for every search. Creating
- *   a new one per tap can leave the browser's speech service holding the
- *   microphone, after which nothing works until the browser is restarted.
- * - A session is ended gracefully with `stop()`. The microphone only ever
- *   opens directly inside a tap, which browsers require.
- * - If the browser refuses the visitor's exact language, the next closest one
- *   is tried automatically before any error is shown.
- * - The session is released when the page is hidden or closed.
+ * iOS and macOS Safari are unforgiving about how sessions are closed. If a
+ * session is cut short with `abort()`, or told to `stop()` while it is still
+ * finishing a phrase, later sessions on the same page open the microphone but
+ * hear nothing until the page is reloaded. So this hook follows three rules:
+ *
+ * 1. Every tap gets a brand new recogniser.
+ * 2. A session that has produced its phrase is left to close by itself. It is
+ *    never aborted; it is only asked to stop if the visitor stops it or it
+ *    lingers, and `abort()` is reserved for the page being closed.
+ * 3. A new session never starts until the previous one has reported its end.
+ *    A tap during that moment is remembered and honoured as soon as it has.
  */
 export function useVoiceSearch({ onHearing, onHeard }: VoiceSearchHandlers): VoiceSearch {
   const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const recogniser = useRef<Recognition | null>(null);
-  /** True from `start()` until the browser reports the session has ended. */
-  const active = useRef(false);
-  /** Languages for this tap, and which one is being tried. */
+  /** The session that has not yet reported its end, if any. */
+  const open = useRef<Session | null>(null);
+  /** True while the visitor expects the microphone to be on. */
+  const wanted = useRef(false);
+  /** Counts taps that turn the microphone on, to tell a new request from the one a session served. */
+  const taps = useRef(0);
   const languages = useRef<string[]>(["en-US"]);
   const attempt = useRef(0);
-  /** The language that last worked, tried first next time. */
   const provenLanguage = useRef<string | null>(null);
-  const heard = useRef("");
-  const delivered = useRef(false);
+  /** Consecutive sessions that closed without hearing anything. */
+  const emptySessions = useRef(0);
   const silenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const graceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handlers = useRef({ onHearing, onHeard });
-  const begin = useRef<() => void>(() => undefined);
-  const start = useRef<() => void>(() => undefined);
+  const startSession = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     handlers.current = { onHearing, onHeard };
@@ -145,194 +166,214 @@ export function useVoiceSearch({ onHearing, onHeard }: VoiceSearchHandlers): Voi
 
   const clearTimers = useCallback(() => {
     if (silenceTimer.current) clearTimeout(silenceTimer.current);
-    if (graceTimer.current) clearTimeout(graceTimer.current);
+    if (closeTimer.current) clearTimeout(closeTimer.current);
     silenceTimer.current = null;
-    graceTimer.current = null;
+    closeTimer.current = null;
   }, []);
 
-  /** Runs when a session is over, however it ended. Delivers the phrase exactly once. */
-  const finish = useCallback(() => {
-    clearTimers();
-    active.current = false;
-    setListening(false);
+  /** Hands the finished phrase to the search, once per session. */
+  const deliver = useCallback((session: Session) => {
+    const phrase = tidy(session.heard);
+    if (!phrase || session.delivered) return;
+    session.delivered = true;
+    emptySessions.current = 0;
+    handlers.current.onHeard(phrase);
+  }, []);
 
-    const phrase = tidy(heard.current);
-    if (phrase && !delivered.current) {
-      delivered.current = true;
-      handlers.current.onHeard(phrase);
-    }
-  }, [clearTimers]);
+  /** Runs when the browser reports a session over, or it is given up on. */
+  const closed = useCallback(
+    (session: Session) => {
+      if (session.ended) return;
+      session.ended = true;
+      if (open.current === session) open.current = null;
+      clearTimers();
+      deliver(session);
 
-  /** Drops the current session at once, with no callbacks, so a new one can start cleanly. */
-  const discard = useCallback(() => {
-    clearTimers();
-    const session = recogniser.current;
-    recogniser.current = null;
-    active.current = false;
-    if (session) {
-      session.onresult = null;
-      session.onerror = null;
-      session.onend = null;
-      try {
-        session.abort();
-      } catch {
-        // Already released.
-      }
-    }
-  }, [clearTimers]);
-
-  /** Asks the browser to end the session, and forces it if no confirmation arrives. */
-  const requestEnd = useCallback(() => {
-    const session = recogniser.current;
-    if (!session || !active.current) return;
-    setListening(false);
-    if (silenceTimer.current) clearTimeout(silenceTimer.current);
-    silenceTimer.current = null;
-    try {
-      session.stop();
-    } catch {
-      // Not running after all.
-    }
-    if (graceTimer.current) clearTimeout(graceTimer.current);
-    graceTimer.current = setTimeout(() => {
-      try {
-        session.abort();
-      } catch {
-        // Already released.
-      }
-      finish();
-    }, END_GRACE_MS);
-  }, [finish]);
-
-  const getRecogniser = useCallback((): Recognition | null => {
-    if (recogniser.current) return recogniser.current;
-    const Constructor = getRecognition();
-    if (!Constructor) return null;
-
-    const session = new Constructor();
-    session.continuous = false;
-    session.interimResults = true;
-    session.maxAlternatives = 1;
-
-    session.onresult = (event) => {
-      const results = Array.from(event.results);
-      const text = results.map((result) => result[0].transcript).join("");
-      heard.current = text;
-      provenLanguage.current = session.lang;
-      const shown = tidy(text);
-      if (shown) handlers.current.onHearing(shown);
-      // One phrase is one search. Ending gracefully lets the browser close the
-      // microphone cleanly; the phrase is delivered when it confirms.
-      if (results.length > 0 && results.every((result) => result.isFinal)) requestEnd();
-    };
-    session.onerror = (event) => {
-      // Refused for this language before hearing anything: try the next one straight away.
-      if (LANGUAGE_ERRORS.has(event.error) && !heard.current && attempt.current + 1 < languages.current.length) {
-        attempt.current += 1;
-        discard();
-        start.current();
+      if (session.retryNextLanguage && wanted.current) {
+        startSession.current();
         return;
       }
-      // "aborted" and "no-speech" after something was heard are not failures.
-      const benign = event.error === "aborted" || (event.error === "no-speech" && heard.current);
-      if (!benign) setError(ERROR_MESSAGES[event.error] ?? GENERIC_ERROR);
-      // Some browsers never signal the end after an error, so make sure it ends.
-      requestEnd();
-    };
-    session.onend = finish;
-
-    recogniser.current = session;
-    return session;
-  }, [discard, finish, requestEnd]);
-
-  useEffect(() => {
-    /** Starts listening in the language currently selected by `attempt`. */
-    start.current = () => {
-      const language = languages.current[attempt.current] ?? "en-US";
-      const open = () => {
-        const session = getRecogniser();
-        if (!session) return false;
-        session.lang = language;
-        session.start();
-        return true;
-      };
-
-      try {
-        if (!open()) return;
-      } catch {
-        // The browser still considers an old session open. Replace it and try once more.
-        discard();
-        try {
-          if (!open()) return;
-        } catch {
-          discard();
-          setListening(false);
-          setError(GENERIC_ERROR);
-          return;
-        }
+      if (wanted.current && taps.current > session.tap) {
+        // The visitor tapped again while this one was closing: now it is safe to start.
+        startSession.current();
+        return;
       }
 
-      active.current = true;
-      setListening(true);
+      wanted.current = false;
+      setListening(false);
+      if (session.failure) {
+        setError(session.failure);
+      } else if (!session.heard) {
+        emptySessions.current += 1;
+        // Twice in a row with the microphone open and nothing heard means the
+        // browser's speech service has stopped delivering audio to this page.
+        setError(emptySessions.current >= 2 ? STUCK_ERROR : ERROR_MESSAGES["no-speech"]);
+      }
+    },
+    [clearTimers, deliver],
+  );
+
+  /**
+   * Waits for a session to close. It is left alone first; if it lingers it is
+   * asked to stop, and if it still never reports back it is simply let go of.
+   * It is never aborted, because that is what breaks Safari.
+   */
+  const awaitClose = useCallback(
+    (session: Session, askNow: boolean) => {
+      if (session.ended) return;
       if (silenceTimer.current) clearTimeout(silenceTimer.current);
-      silenceTimer.current = setTimeout(() => {
-        if (!heard.current) setError(ERROR_MESSAGES["no-speech"]);
-        requestEnd();
-      }, MAX_LISTEN_MS);
-    };
+      silenceTimer.current = null;
+      if (closeTimer.current) clearTimeout(closeTimer.current);
 
-    /** A fresh tap on the microphone. Always starts immediately, inside the tap itself. */
-    begin.current = () => {
-      // A previous session that is still closing is dropped rather than waited for:
-      // browsers only allow the microphone to open in direct response to a tap.
-      if (active.current) discard();
+      const ask = () => {
+        try {
+          session.recognition.stop();
+        } catch {
+          // Already stopped.
+        }
+        closeTimer.current = setTimeout(() => closed(session), STOP_GRACE_MS);
+      };
 
-      heard.current = "";
-      delivered.current = false;
-      const options = speechLanguages(navigator.language);
-      languages.current = provenLanguage.current
-        ? [provenLanguage.current, ...options.filter((option) => option !== provenLanguage.current)]
-        : options;
-      attempt.current = 0;
-      setError(null);
-      start.current();
+      if (askNow) ask();
+      else closeTimer.current = setTimeout(ask, NATURAL_END_MS);
+    },
+    [closed],
+  );
+
+  useEffect(() => {
+    startSession.current = () => {
+      const Constructor = getRecognition();
+      if (!Constructor) return;
+
+      const recognition = new Constructor();
+      recognition.lang = languages.current[attempt.current] ?? "en-US";
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      const session: Session = {
+        recognition,
+        tap: taps.current,
+        heard: "",
+        delivered: false,
+        ended: false,
+        failure: null,
+        retryNextLanguage: false,
+      };
+
+      recognition.onresult = (event) => {
+        const results = Array.from(event.results);
+        session.heard = results.map((result) => result[0].transcript).join("");
+        provenLanguage.current = recognition.lang;
+        const shown = tidy(session.heard);
+        if (shown && !session.delivered) handlers.current.onHearing(shown);
+
+        if (results.length > 0 && results.every((result) => result.isFinal)) {
+          // The phrase is complete: search now, and let the browser close the
+          // session in its own time rather than interrupting it.
+          wanted.current = false;
+          setListening(false);
+          deliver(session);
+          awaitClose(session, false);
+        }
+      };
+
+      recognition.onerror = (event) => {
+        const refusedLanguage =
+          LANGUAGE_ERRORS.has(event.error) && !session.heard && attempt.current + 1 < languages.current.length;
+        if (refusedLanguage) {
+          attempt.current += 1;
+          session.retryNextLanguage = true;
+        } else if (event.error !== "aborted" && !(event.error === "no-speech" && session.heard)) {
+          session.failure = ERROR_MESSAGES[event.error] ?? GENERIC_ERROR;
+          wanted.current = false;
+        }
+        // Most browsers follow an error with the end signal; make sure of it without forcing.
+        awaitClose(session, false);
+      };
+
+      recognition.onend = () => closed(session);
+
+      try {
+        recognition.start();
+      } catch {
+        wanted.current = false;
+        setListening(false);
+        setError(GENERIC_ERROR);
+        return;
+      }
+
+      open.current = session;
+      setListening(true);
+      silenceTimer.current = setTimeout(() => awaitClose(session, true), MAX_LISTEN_MS);
     };
-  }, [discard, getRecogniser, requestEnd]);
+  }, [awaitClose, closed, deliver]);
 
   // Checked after mount so the server and the first client render agree.
   useEffect(() => {
     const frame = requestAnimationFrame(() => setSupported(Boolean(getRecognition())));
 
-    // Let go of the microphone whenever the page is hidden, closed or navigated away from.
-    const release = () => {
-      if (!active.current) return;
+    // Leaving the page for another app or tab: ask politely, so the microphone is released.
+    const onVisibility = () => {
+      if (document.visibilityState !== "hidden") return;
+      wanted.current = false;
+      const session = open.current;
+      if (session && !session.ended) {
+        try {
+          session.recognition.stop();
+        } catch {
+          // Already stopped.
+        }
+      }
+    };
+    // The page itself is going away, which is the one time a hard stop is right.
+    const onPageHide = () => {
+      wanted.current = false;
       try {
-        recogniser.current?.abort();
+        open.current?.recognition.abort();
       } catch {
         // Already released.
       }
     };
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") release();
-    };
-    window.addEventListener("pagehide", release);
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", onPageHide);
 
     return () => {
       cancelAnimationFrame(frame);
-      window.removeEventListener("pagehide", release);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", onPageHide);
       clearTimers();
-      release();
+      onPageHide();
     };
   }, [clearTimers]);
 
-  const stop = useCallback(() => requestEnd(), [requestEnd]);
+  const stop = useCallback(() => {
+    wanted.current = false;
+    setListening(false);
+    const session = open.current;
+    if (session && !session.ended) awaitClose(session, true);
+  }, [awaitClose]);
 
   const toggle = useCallback(() => {
-    if (listening) stop();
-    else begin.current();
-  }, [listening, stop]);
+    if (wanted.current) {
+      stop();
+      return;
+    }
+
+    wanted.current = true;
+    taps.current += 1;
+    setError(null);
+    setListening(true);
+
+    const options = speechLanguages(navigator.language);
+    languages.current = provenLanguage.current
+      ? [provenLanguage.current, ...options.filter((option) => option !== provenLanguage.current)]
+      : options;
+    attempt.current = 0;
+
+    // If the last session is still closing, `closed` starts the new one the moment it has.
+    if (!open.current) startSession.current();
+  }, [stop]);
 
   return { supported, listening, error, toggle, stop };
 }

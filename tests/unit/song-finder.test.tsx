@@ -423,43 +423,55 @@ describe("voice search", () => {
     await screen.findByRole("region", { name: "Search results" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(requestedParams(fetchMock).get("q")).toBe("Die with a smile");
-    // The microphone was closed gracefully, not cut off.
-    expect(session.stop).toHaveBeenCalled();
-    expect(session.abort).not.toHaveBeenCalled();
     expect(await mic()).toHaveAttribute("aria-pressed", "false");
+
+    // The finished session is left to close by itself: interrupting it is what breaks Safari.
+    expect(session.stop).not.toHaveBeenCalled();
+    expect(session.abort).not.toHaveBeenCalled();
+    act(() => session.onend?.());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("works again for a second and third search, reusing one recogniser", async () => {
+  it("works for a second and third search, each with a fresh recogniser", async () => {
     useFake();
     const fetchMock = mockApi({ body: success([track()]) });
     const { user, input } = setup();
+    const sessions: FakeRecognition[] = [];
 
     for (const phrase of ["die with a smile", "oorum blood", "shallow"]) {
       await user.click(await mic());
-      act(() => FakeRecognition.last!.say(phrase, true));
+      const session = FakeRecognition.last!;
+      sessions.push(session);
+      act(() => session.say(phrase, true));
+      act(() => session.onend?.());
       expect(input).toHaveValue(phrase);
       await waitFor(() => expect(requestedParams(fetchMock, fetchMock.mock.calls.length - 1).get("q")).toBe(phrase));
     }
-    expect(FakeRecognition.created).toBe(1);
-    expect(FakeRecognition.last!.start).toHaveBeenCalledTimes(3);
+
+    expect(new Set(sessions).size).toBe(3);
+    for (const session of sessions) {
+      expect(session.start).toHaveBeenCalledTimes(1);
+      expect(session.abort).not.toHaveBeenCalled();
+    }
   });
 
-  it("starts immediately when tapped while the previous session is still closing", async () => {
+  it("waits for the previous session to finish closing before opening the microphone again", async () => {
     useFake();
-    FakeRecognition.confirmsEnd = false;
     mockApi({ body: success([track()]) });
     const { user } = setup();
 
     await user.click(await mic());
     const first = FakeRecognition.last!;
-    await user.click(screen.getByRole("button", { name: "Stop listening" }));
-    // The old session never confirmed it ended; a new tap must still open the microphone at once.
+    act(() => first.say("die with a smile", true));
+    // The browser has not yet reported the first session over.
     await user.click(await mic());
-    const second = FakeRecognition.last!;
-    expect(second).not.toBe(first);
-    expect(first.abort).toHaveBeenCalled();
-    expect(second.start).toHaveBeenCalledTimes(1);
+    expect(FakeRecognition.created).toBe(1);
     expect(screen.getByRole("button", { name: "Stop listening" })).toBeInTheDocument();
+
+    act(() => first.onend?.());
+    expect(FakeRecognition.created).toBe(2);
+    expect(FakeRecognition.last!.start).toHaveBeenCalledTimes(1);
+    expect(first.abort).not.toHaveBeenCalled();
   });
 
   it("uses a language the device supports and falls back without showing an error", async () => {
@@ -473,8 +485,9 @@ describe("voice search", () => {
     // en-LK has no recogniser on Apple devices; the closest common English is tried first.
     expect(first.lang).toBe("en-IN");
 
-    // The device refuses that one too: the next language is tried straight away.
+    // The device refuses that one too: the next language is tried once this session has closed.
     act(() => first.onerror?.({ error: "service-not-allowed" }));
+    act(() => first.onend?.());
     const second = FakeRecognition.last!;
     expect(second).not.toBe(first);
     expect(second.lang).toBe("en-US");
@@ -483,6 +496,7 @@ describe("voice search", () => {
     expect(screen.getByRole("button", { name: "Stop listening" })).toBeInTheDocument();
 
     act(() => second.say("oorum blood", true));
+    act(() => second.onend?.());
     expect(input).toHaveValue("oorum blood");
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 
@@ -497,29 +511,13 @@ describe("voice search", () => {
     mockApi({ body: success([]) });
     const { user } = setup();
     await user.click(await mic());
-    act(() => FakeRecognition.last!.onerror?.({ error: "service-not-allowed" }));
-    act(() => FakeRecognition.last!.onerror?.({ error: "service-not-allowed" }));
+    for (let refusal = 0; refusal < 2; refusal += 1) {
+      const session = FakeRecognition.last!;
+      act(() => session.onerror?.({ error: "service-not-allowed" }));
+      act(() => session.onend?.());
+    }
     expect(await screen.findByText(/Voice search isn't available here/)).toBeInTheDocument();
     expect(await mic()).toHaveAttribute("aria-pressed", "false");
-  });
-
-  it("recovers when the browser reports an error and never signals the end", async () => {
-    useFake();
-    FakeRecognition.confirmsEnd = false;
-    mockApi({ body: success([]) });
-    const { user } = setup();
-    await user.click(await mic());
-    const session = FakeRecognition.last!;
-    act(() => session.onerror?.({ error: "service-not-allowed" }));
-
-    expect(await screen.findByText(/Voice search isn't available here/)).toBeInTheDocument();
-    expect(await mic()).toHaveAttribute("aria-pressed", "false");
-    expect(screen.queryByText(/Listening/)).not.toBeInTheDocument();
-    // With no confirmation from the browser, the session is forced closed so the next tap works.
-    await waitFor(() => expect(session.abort).toHaveBeenCalled(), { timeout: 2500 });
-    await user.click(await mic());
-    expect(FakeRecognition.last!.start).toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Stop listening" })).toBeInTheDocument();
   });
 
   it("stops listening when Search is pressed or the mic is tapped again", async () => {
@@ -528,15 +526,18 @@ describe("voice search", () => {
     const { user } = setup();
 
     await user.click(await mic());
-    const session = FakeRecognition.last!;
+    const first = FakeRecognition.last!;
     await user.click(screen.getByRole("button", { name: /^Search$/ }));
-    expect(session.stop).toHaveBeenCalledTimes(1);
-    expect(await mic()).toBeInTheDocument();
+    expect(first.stop).toHaveBeenCalledTimes(1);
+    expect(first.abort).not.toHaveBeenCalled();
+    expect(await mic()).toHaveAttribute("aria-pressed", "false");
 
     await user.click(await mic());
+    const second = FakeRecognition.last!;
+    expect(second).not.toBe(first);
     await user.click(screen.getByRole("button", { name: "Stop listening" }));
-    expect(session.stop).toHaveBeenCalledTimes(2);
-    expect(await mic()).toBeInTheDocument();
+    expect(second.stop).toHaveBeenCalledTimes(1);
+    expect(await mic()).toHaveAttribute("aria-pressed", "false");
   });
 
   it("explains a blocked microphone", async () => {
@@ -545,8 +546,47 @@ describe("voice search", () => {
     const { user } = setup();
     await user.click(await mic());
     act(() => FakeRecognition.last!.onerror?.({ error: "not-allowed" }));
+    act(() => FakeRecognition.last!.onend?.());
     expect(await screen.findByText(/Microphone access is blocked/)).toBeInTheDocument();
+    expect(await mic()).toHaveAttribute("aria-pressed", "false");
   });
+
+  it("says to reload when the microphone opens twice in a row and hears nothing", async () => {
+    useFake();
+    mockApi({ body: success([]) });
+    const { user } = setup();
+
+    await user.click(await mic());
+    act(() => FakeRecognition.last!.onend?.());
+    expect(await screen.findByText(/We didn't catch that/)).toBeInTheDocument();
+
+    await user.click(await mic());
+    act(() => FakeRecognition.last!.onend?.());
+    expect(await screen.findByText(/Reload the page to use it again/)).toBeInTheDocument();
+  });
+
+  it(
+    "lets go of a session that never reports its end, without aborting it",
+    async () => {
+      useFake();
+      FakeRecognition.confirmsEnd = false;
+      mockApi({ body: success([]) });
+      const { user } = setup();
+
+      await user.click(await mic());
+      const session = FakeRecognition.last!;
+      await user.click(screen.getByRole("button", { name: "Stop listening" }));
+      expect(session.stop).toHaveBeenCalledTimes(1);
+      expect(await mic()).toHaveAttribute("aria-pressed", "false");
+
+      // After the grace period the next tap works with a new recogniser.
+      await new Promise((resolve) => setTimeout(resolve, 3300));
+      await user.click(await mic());
+      expect(FakeRecognition.created).toBe(2);
+      expect(session.abort).not.toHaveBeenCalled();
+    },
+    10_000,
+  );
 });
 
 describe("speechLanguages", () => {
