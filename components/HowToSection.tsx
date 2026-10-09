@@ -2,7 +2,7 @@ import { howToSteps } from "@/lib/content/how-to";
 
 export function HowToSection() {
   return (
-    <section className="content" id="how-it-works" aria-labelledby="how-it-works-title">
+    <section className="content content--screen" id="how-it-works" aria-labelledby="how-it-works-title">
       <h2 className="content__title" id="how-it-works-title">
         How to use an ISRC code on Instagram
       </h2>

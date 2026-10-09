@@ -27,7 +27,7 @@ export function FaqSection() {
   }, []);
 
   return (
-    <section className="content" id="faq" aria-labelledby="faq-title">
+    <section className="content content--screen content--top" id="faq" aria-labelledby="faq-title">
       <h2 className="content__title" id="faq-title">
         Frequently asked questions
       </h2>

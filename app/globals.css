@@ -899,6 +899,23 @@ select {
   padding: 56px 20px;
 }
 
+/*
+ * Home page sections each take at least one full screen, with their content
+ * centred. The FAQ stays top-aligned so its heading doesn't move as questions
+ * open and close.
+ */
+.content--screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+.content--top {
+  justify-content: flex-start;
+}
+
 .content__title {
   font-family: var(--font-display);
   font-size: 24px;
@@ -1378,6 +1395,11 @@ select {
 
   .content {
     padding: 40px 20px;
+  }
+
+  .content--screen {
+    min-height: calc(100vh - var(--tabbar-height) - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100svh - var(--tabbar-height) - env(safe-area-inset-bottom, 0px));
   }
 
   .subpage__header {

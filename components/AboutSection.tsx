@@ -3,7 +3,7 @@ import { site } from "@/lib/site";
 
 export function AboutSection() {
   return (
-    <section className="content" id="about" aria-labelledby="about-title">
+    <section className="content content--screen" id="about" aria-labelledby="about-title">
       <h2 className="content__title" id="about-title">
         About {site.name}
       </h2>

@@ -179,6 +179,16 @@ test("bug reports and missing-song reports open an email to The Atom", async ({ 
   await expect(feature).toHaveAttribute("href", /^mailto:info@theatom\.lk\?subject=Missing%20song/);
 });
 
+test("every home page section is at least one screen tall", async ({ page }) => {
+  await page.goto("/");
+  const viewportHeight = page.viewportSize()!.height;
+  const tabBar = isPhoneLayout(page) ? 45 : 0;
+  for (const id of ["how-it-works", "faq", "about"]) {
+    const box = await page.locator(`#${id}`).boundingBox();
+    expect(Math.ceil(box!.height), id).toBeGreaterThanOrEqual(viewportHeight - tabBar);
+  }
+});
+
 test("FAQ answers stay closed until their question is opened", async ({ page }) => {
   await page.goto("/");
   const answer = page.getByText("ISRC codes are unique to recordings, not to songs.", { exact: false });

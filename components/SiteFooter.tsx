@@ -30,7 +30,6 @@ export function SiteFooter() {
         </ul>
       </nav>
       <p className="footer__meta">
-        <span>English</span>
         <span>
           © {site.copyrightYear} {site.name} by {site.publisher.name}
         </span>
