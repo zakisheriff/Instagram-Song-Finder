@@ -26,7 +26,8 @@ interface SongFinderProps {
  */
 export function SongFinder({ headline }: SongFinderProps) {
   const search = useSongSearch();
-  const voice = useVoiceSearch(search.setQuery);
+  // Words appear as they are spoken; the search runs once, on the finished phrase.
+  const voice = useVoiceSearch({ onHearing: search.showText, onHeard: search.searchFor });
   const [pickedId, setPickedId] = useState<string | null>(null);
   const messageId = useId();
 
