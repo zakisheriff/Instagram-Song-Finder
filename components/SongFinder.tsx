@@ -7,7 +7,7 @@ import { SEARCH_INPUT_ID } from "@/lib/search/constants";
 import { MAX_QUERY_LENGTH } from "@/lib/search/detect";
 import { site } from "@/lib/site";
 import { FeedbackLinks } from "./FeedbackLinks";
-import { HeroCollage } from "./HeroCollage";
+import { DemoVideo } from "./DemoVideo";
 import { CloseIcon } from "./icons";
 import { SearchResults } from "./SearchResults";
 import { SiteLockup } from "./SiteLockup";
@@ -42,22 +42,11 @@ export function SongFinder({ headline }: SongFinderProps) {
 
   return (
     <div className="split">
-      <section className="hero" aria-labelledby="hero-headline">
-        <div className="hero__inner">
-          <Link className="hero__logo" href="/" aria-label={`${site.name} home`}>
-            <SiteLogo size={60} priority />
-          </Link>
-          <p className="hero__wordmark">
-            <SiteLockup />
-          </p>
-          {headline}
-          <HeroCollage />
-          <FeedbackLinks className="hero__feedback" />
-        </div>
-      </section>
-
-      <div className="split__divider" aria-hidden="true" />
-
+      {/*
+        The search panel comes first in the page's source so that keyboard and
+        screen-reader users reach the search box before the demo player's
+        controls. CSS `order` puts the hero back on the left (and on top on phones).
+      */}
       <section className="panel" aria-labelledby="panel-heading">
         <h2 className="panel__heading" id="panel-heading">
           {site.name}
@@ -126,6 +115,9 @@ export function SongFinder({ headline }: SongFinderProps) {
           </a>
         </form>
 
+        {/* On phones the demo sits under the search box until there are results to show. */}
+        {search.status === "idle" && !search.result && <DemoVideo className="demo--panel" />}
+
         <SearchResults
           search={search}
           selectedId={selected?.id ?? null}
@@ -135,12 +127,28 @@ export function SongFinder({ headline }: SongFinderProps) {
         <FeedbackLinks className="panel__feedback" />
 
         <p className="panel__byline">
-          <span>from</span>
+          <span>by</span>
           <a href={site.publisher.url} target="_blank" rel="noopener">
             {site.publisher.name}
           </a>
         </p>
       </section>
+      <div className="split__divider" aria-hidden="true" />
+
+      <section className="hero" aria-labelledby="hero-headline">
+        <div className="hero__inner">
+          <Link className="hero__logo" href="/" aria-label={`${site.name} home`}>
+            <SiteLogo size={60} priority />
+          </Link>
+          <p className="hero__wordmark">
+            <SiteLockup />
+          </p>
+          {headline}
+          <DemoVideo className="demo--hero" />
+          <FeedbackLinks className="hero__feedback" />
+        </div>
+      </section>
+
     </div>
   );
 }

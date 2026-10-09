@@ -180,7 +180,9 @@ select {
   min-height: 100svh;
 }
 
+/* Visual order: hero, divider, panel. The source order puts the panel first. */
 .split__divider {
+  order: 2;
   flex: 0 0 2px;
   background: var(--color-divider);
 }
@@ -195,6 +197,7 @@ select {
 /* ---------- Hero (left column) ---------- */
 
 .hero {
+  order: 1;
   position: relative;
   flex: 1 1 0;
   min-width: 0;
@@ -266,22 +269,142 @@ select {
 /* ---------- Hero illustration ---------- */
 
 /*
- * As tall as the reference's 545px image box (669px wide at this artwork's
- * proportions). On short screens the box gives up height and the artwork
- * scales down inside it.
+ * The demo is a portrait phone recording, shown inside a phone: a black bezel
+ * with rounded corners and side buttons. `.demo` is the screen itself, sized
+ * to the recording's exact proportions, so the video is never cropped.
+ *
+ * The bezel is a solid shape that sits behind the screen and extends past it
+ * on every side. Because the screen overlaps it, there is no seam between the
+ * two for the page background to show through as a pale line.
  */
-.collage {
-  flex: 0 1 auto;
+.demo {
+  --bezel: 6px;
+  position: relative;
+  display: block;
+  aspect-ratio: 588 / 1280;
+  /* Equal horizontal and vertical radii, so the corners are true circles. */
+  border-radius: 13.5% / 6.2%;
+  /* Keeps the bezel and buttons stacked behind the screen, not behind the page. */
+  isolation: isolate;
+}
+
+.demo__bezel {
+  position: absolute;
+  inset: calc(-1 * var(--bezel));
+  z-index: -1;
+  border-radius: 15% / 6.85%;
+  background: rgb(10, 10, 11);
+  box-shadow:
+    0 0 0 1px rgb(72, 72, 74),
+    0 0 0 2px rgb(20, 20, 21),
+    0 30px 60px rgba(0, 0, 0, 0.22);
+}
+
+/* Side buttons: three on the left, one on the right, tucked behind the bezel's edge. */
+.demo::before,
+.demo::after {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  width: 4px;
+  background: rgb(28, 28, 30);
+}
+
+.demo::before {
+  top: 15%;
+  left: calc(-1 * (var(--bezel) + 4px));
+  height: 27%;
+  border-radius: 2px 0 0 2px;
+  background: linear-gradient(
+    rgb(28, 28, 30) 0 15%,
+    transparent 15% 27%,
+    rgb(28, 28, 30) 27% 58%,
+    transparent 58% 69%,
+    rgb(28, 28, 30) 69% 100%
+  );
+}
+
+.demo::after {
+  top: 27%;
+  right: calc(-1 * (var(--bezel) + 4px));
+  height: 13%;
+  border-radius: 0 2px 2px 0;
+}
+
+.demo__screen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: #000;
+}
+
+.demo__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+/*
+ * A hairline edge in the bezel's colour, drawn over the screen's rim. A screen
+ * recording is a full rectangle, and its extreme corners hold pixels a real
+ * phone's curved glass would hide (the white page behind the keyboard's
+ * rounded edge, for one). This covers them without cropping the video or
+ * making the corners rounder than a real phone's.
+ */
+.demo__screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px rgb(10, 10, 11);
+  pointer-events: none;
+}
+
+/* The video has to start silent; this is the obvious way to turn its music on. */
+.demo__sound {
+  position: absolute;
+  bottom: 17%;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* Desktop: fills the space under the headline and gives up height on short screens. */
+.demo--hero {
+  flex: 0 1 580px;
   min-height: 0;
-  width: min(100%, 669px);
+  width: auto;
   height: auto;
-  aspect-ratio: 1390 / 1132;
-  object-fit: contain;
+  max-height: 580px;
+  /* Room for the bezel, which is drawn outside the screen. */
+  margin: 28px 16px 14px;
+}
+
+/* Phones only; see the phone layout below. */
+.demo--panel {
+  display: none;
 }
 
 /* ---------- Panel (right column) ---------- */
 
 .panel {
+  order: 3;
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
@@ -1240,11 +1363,10 @@ select {
   color: var(--color-text);
 }
 
+/* Sits under the phone, in the normal flow, so the two can never overlap. */
 .hero__feedback {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 20px;
+  flex: none;
+  margin-top: 8px;
 }
 
 /* Phone-only copy, shown at the bottom of the first screen. */
@@ -1413,7 +1535,7 @@ select {
 
   .split__divider,
   .hero__logo,
-  .collage,
+  .demo--hero,
   .panel__heading,
   .search__help {
     display: none;
@@ -1492,17 +1614,9 @@ select {
     margin: 32px 16px 0;
   }
 
-  /* Pinned to the bottom of the first screen; pushed down when results appear. */
+  /* "by The Atom" on a single line, under the feedback links. */
   .panel__byline {
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
     margin-top: 16px;
-  }
-
-  .panel__byline a {
-    font-size: 15px;
-    line-height: 20px;
   }
 
   .content {
@@ -1520,6 +1634,17 @@ select {
 
   .subpage__back {
     max-width: none;
+  }
+
+  /* Wide enough to follow on a phone; the landing grows past one screen to fit it. */
+  .demo--panel {
+    --bezel: 5px;
+    display: block;
+    flex: none;
+    align-self: center;
+    width: min(60vw, 240px);
+    height: auto;
+    margin: 40px 16px 12px;
   }
 
   /* On phones the links sit at the bottom of the first screen, above the byline. */

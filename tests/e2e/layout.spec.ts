@@ -48,7 +48,7 @@ test("uses the two-column reference layout on desktop and the stacked one on pho
   page,
 }) => {
   await page.goto("/");
-  const collage = page.locator(".collage");
+  const collage = page.locator(".demo--hero");
   const tabBar = page.getByRole("navigation", { name: "Sections" });
 
   if (isPhoneLayout(page)) {
@@ -94,7 +94,7 @@ test("on desktop the logo stays with the hero while the results scroll", async (
   await expect(page.getByText("Song 9")).toBeVisible();
 
   const logo = page.getByRole("link", { name: "Instagram Song Finder home" });
-  const illustration = page.locator(".collage");
+  const illustration = page.locator(".demo--hero");
   const before = { logo: await logo.boundingBox(), art: await illustration.boundingBox() };
   await page.mouse.wheel(0, 300);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
@@ -120,23 +120,83 @@ test("on phones the site name and the pill share a top bar without touching", as
   expect(headline!.y).toBeGreaterThan(name!.y + name!.height);
 });
 
-test("on phones the landing fills the first screen and the guide starts below it", async ({
+test("on phones the landing is at least one screen tall and the guide starts below it", async ({
   page,
 }) => {
   test.skip(!isPhoneLayout(page), "phone layout only");
   await page.goto("/");
   const viewportHeight = page.viewportSize()!.height;
   const tabBar = await page.getByRole("navigation", { name: "Sections" }).boundingBox();
-  const byline = await page.locator(".panel__byline").boundingBox();
-  const landingDivider = await page.locator("main > .rule").first().boundingBox();
+  const landing = await page.locator(".split").boundingBox();
+  const demo = await page.locator(".demo--panel").boundingBox();
+  const search = await page.getByRole("button", { name: "Search", exact: true }).boundingBox();
   const guide = await page.getByRole("heading", { name: "How to use an ISRC code on Instagram" }).boundingBox();
 
-  // "from The Atom" sits at the bottom of the first screen, just above the tab bar.
-  expect(byline!.y + byline!.height).toBeLessThanOrEqual(tabBar!.y);
-  expect(byline!.y).toBeGreaterThan(viewportHeight * 0.75);
-  // The landing reaches the navigation, so nothing from the next section can peek above it.
-  expect(Math.round(landingDivider!.y)).toBeGreaterThanOrEqual(Math.round(tabBar!.y) - 1);
+  expect(Math.ceil(landing!.height)).toBeGreaterThanOrEqual(viewportHeight - Math.round(tabBar!.height));
+  // The demo starts right under the search button, so it is in view without scrolling.
+  expect(demo!.y).toBeGreaterThan(search!.y + search!.height);
+  expect(demo!.y).toBeLessThan(tabBar!.y);
+  // Nothing from the next section shows until the visitor scrolls past the landing.
   expect(guide!.y).toBeGreaterThanOrEqual(tabBar!.y);
+});
+
+test("the demo plays silently by itself and offers the browser's own player controls", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/");
+  const demo = page.locator(isPhoneLayout(page) ? ".demo--panel" : ".demo--hero");
+  const video = demo.locator("video");
+  await expect(demo).toBeVisible();
+  await demo.scrollIntoViewIfNeeded();
+
+  await expect(video).toHaveAttribute("poster", "/demo-poster.webp");
+  await expect(video).toHaveAttribute("playsinline", "");
+  await expect(video).toHaveAttribute("loop", "");
+  // The native player, so visitors can pause, scrub and turn the sound on.
+  await expect(video).toHaveAttribute("controls", "");
+  expect(await video.evaluate((node: HTMLVideoElement) => node.muted)).toBe(true);
+
+  // It plays by itself once in view.
+  await expect.poll(() => video.evaluate((node: HTMLVideoElement) => !node.paused), { timeout: 15_000 }).toBe(true);
+
+  // One press turns the music on, and the button gets out of the way.
+  const sound = demo.getByRole("button", { name: "Tap for sound" });
+  await expect(sound).toBeVisible();
+  await sound.click();
+  expect(await video.evaluate((node: HTMLVideoElement) => node.muted)).toBe(false);
+  await expect(sound).toHaveCount(0);
+  // Muting from the player's own controls brings it back.
+  await video.evaluate((node: HTMLVideoElement) => {
+    node.muted = true;
+  });
+  await expect(sound).toBeVisible();
+
+  // Scrubbing works: jumping ahead moves the playhead.
+  await video.evaluate((node: HTMLVideoElement) => {
+    node.currentTime = 12;
+  });
+  await expect.poll(() => video.evaluate((node: HTMLVideoElement) => node.currentTime)).toBeGreaterThanOrEqual(12);
+
+  // The screen keeps the recording's proportions, so nothing is cropped.
+  const screen = await demo.boundingBox();
+  expect(screen!.width / screen!.height).toBeCloseTo(588 / 1280, 1);
+
+  const file = await request.get("/demo.mp4");
+  expect(file.status()).toBe(200);
+  expect(file.headers()["content-type"]).toContain("video/mp4");
+  // Small enough not to hold the page up on a phone connection.
+  expect(Number(file.headers()["content-length"])).toBeLessThan(4_000_000);
+});
+
+test("on phones the demo makes way for search results", async ({ page, mockSearch }) => {
+  test.skip(!isPhoneLayout(page), "phone layout only");
+  await mockSearch(results([TRACK]));
+  await page.goto("/");
+  await expect(page.locator(".demo--panel")).toBeVisible();
+  await searchBox(page).fill("die with a smile");
+  await expect(page.getByRole("region", { name: "Search results" })).toBeVisible();
+  await expect(page.locator(".demo--panel")).toHaveCount(0);
 });
 
 test("the tab bar highlights the tab for what is on screen", async ({ page }) => {
@@ -184,6 +244,21 @@ test("the top-right pill links to GitHub, then becomes Try now past the hero", a
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(5);
   await expect(searchBox(page)).toBeFocused();
   await expect(star).toBeVisible();
+});
+
+test("the feedback links and the byline sit clear of the demo phone", async ({ page }) => {
+  await page.goto("/");
+  const phone = await page.locator(isPhoneLayout(page) ? ".demo--panel" : ".demo--hero").boundingBox();
+  const links = await page
+    .locator(isPhoneLayout(page) ? ".panel__feedback" : ".hero__feedback")
+    .boundingBox();
+  // Allow for the bezel drawn around the screen.
+  expect(links!.y).toBeGreaterThanOrEqual(phone!.y + phone!.height + 10);
+
+  const byline = page.locator(".panel__byline");
+  await expect(byline).toHaveText(/^by\s*The Atom$/);
+  // One line of text, not two.
+  expect((await byline.boundingBox())!.height).toBeLessThan(26);
 });
 
 test("bug reports and missing-song reports open an email to The Atom", async ({ page }) => {

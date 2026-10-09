@@ -52,3 +52,6 @@ next-env.d.ts
 
 # local tooling
 /.claude/
+
+# raw demo recording: only the compressed copy in public/ is published
+/assets/demo/
