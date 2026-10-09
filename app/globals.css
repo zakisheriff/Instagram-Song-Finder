@@ -348,18 +348,21 @@ select {
 }
 
 /*
- * A hairline edge in the bezel's colour, drawn over the screen's rim. A screen
- * recording is a full rectangle, and its extreme corners hold pixels a real
- * phone's curved glass would hide (the white page behind the keyboard's
- * rounded edge, for one). This covers them without cropping the video or
- * making the corners rounder than a real phone's.
+ * The inner lip of the bezel: a solid ring in the bezel's colour that sits on
+ * top and straddles the edge of the screen, one pixel outside it and two
+ * inside. It does two jobs. Where the screen's rounded edge meets the bezel,
+ * browsers blend the edge pixels, and against a white video that shows as a
+ * pale fringe; the ring covers that seam with solid colour. And a screen
+ * recording is a full rectangle whose extreme corners hold pixels a real
+ * phone's curved glass would hide; the ring covers those too, without cropping
+ * the video or making the corners rounder than a real phone's.
  */
-.demo__screen::after {
-  content: "";
+.demo__rim {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 0 2px rgb(10, 10, 11);
+  inset: -1px;
+  z-index: 2;
+  border: 3px solid rgb(10, 10, 11);
+  border-radius: 13.6% / 6.25%;
   pointer-events: none;
 }
 

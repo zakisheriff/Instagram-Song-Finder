@@ -130,6 +130,7 @@ export function DemoVideo({ className }: DemoVideoProps) {
           </button>
         )}
       </div>
+      <span className="demo__rim" aria-hidden="true" />
     </div>
   );
 }
