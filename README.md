@@ -1,120 +1,299 @@
-# Instagram Song Finder
+# <div align="center">Instagram Song Finder</div>
 
-A free web tool by [The Atom](https://www.theatom.lk) that finds the ISRC of a song and formats it for Instagram's music search, for example `isrc:USUM72409273`.
+<div align="center">
+<strong>Find any song's ISRC and copy it, ready for Instagram music search</strong>
+</div>
 
-Production domain: **https://instagramsongfinder.theatom.lk**
+<br />
 
-> Instagram Song Finder is an independent tool. It is not affiliated with, endorsed by or sponsored by Instagram, Meta or Spotify.
+<div align="center">
 
-## What it does
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178c6?style=for-the-badge&logo=typescript&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-Vitest%20%2B%20Playwright-6e9f18?style=for-the-badge&logo=vitest&logoColor=white)
 
-One search box accepts all of the following and works out which one it was given:
+<br />
 
-| Input | Example |
-| --- | --- |
-| Song title, artist, both, partial title or keywords | `Die With A Smile Lady Gaga` |
-| Spotify track link, with or without tracking parameters | `https://open.spotify.com/track/2plbrEY59IikOBgBGLjaoe?si=…` |
-| Spotify share link | `https://spotify.link/…` |
-| Spotify URI | `spotify:track:2plbrEY59IikOBgBGLjaoe` |
-| ISRC, raw, hyphenated or prefixed | `USUM72409273`, `US-UM7-24-09273`, `isrc:USUM72409273` |
+<a href="https://instagramsongfinder.theatom.lk">
+<img src="https://img.shields.io/badge/View%20Live%20Site-Click%20Here-0064e0?style=for-the-badge&logo=safari&logoColor=white" height="50" />
+</a>
 
-Each matching recording is listed separately with its artwork, artists, album, release date, length, version labels (Live, Remastered, Sped up, …) and its own ISRC. **Copy for Instagram** copies the full `isrc:CODE` string, and **Copy and open Instagram** copies it and opens Instagram (Instagram offers no link that pre-fills its music search, so pasting is still manual). When a catalog has no ISRC for a recording the site says so and never invents one.
+<br />
+<br />
 
-## Stack
+**[Visit Live Site: https://instagramsongfinder.theatom.lk](https://instagramsongfinder.theatom.lk)**
 
-- Next.js 16 (App Router, React Server Components, Cache Components), React 19, TypeScript in strict mode
-- Plain CSS with design tokens taken from the reference capture
-- Zod for input and environment validation
-- Vitest and Testing Library for unit and component tests, Playwright for end-to-end tests
+</div>
 
-## Getting started
+<br />
 
-Requires Node.js 22.12 or newer.
+> **"The right recording, not the nearest cover."**
+>
+> Instagram Song Finder turns a song name, an artist, a Spotify link or an ISRC into the exact recording's code.  
+> One click copies `isrc:CODE`, ready to paste into Instagram's music search for Reels and Stories.
+
+---
+
+## 🌟 Vision
+
+Instagram Song Finder's mission is to be:
+
+- **A free, no-login tool** — search, pick the recording, copy the code
+- **One search box for everything** — titles, artists, keywords, Spotify links, Spotify URIs and ISRCs
+- **Honest about its data** — real catalog metadata only, and no promises about what Instagram carries
+
+---
+
+## ✨ Why Instagram Song Finder?
+
+Searching Instagram's music picker by name often surfaces covers, remixes and sped-up edits before the original.  
+An ISRC identifies **one specific recording**, so searching by code is a precise way to ask for the version you want.
+
+> An ISRC identifies a sound recording. It does not mean Instagram has licensed or indexed that recording. Searching Instagram by ISRC is not an officially documented feature and can vary by account type, region and app version.
+
+---
+
+## 🎨 Reference-Faithful Design
+
+- **Two-Column Hero**  
+  Illustration and headline on the left, search panel on the right, each filling the first screen.
+
+- **Measured Components**  
+  60px fields with a 16px radius and floating label, 44px pill buttons, taken from the reference capture.
+
+- **Phone Layout**  
+  A centred landing that fills one screen, with a bottom tab bar that highlights the section in view.
+
+- **No Input Zoom on iOS**  
+  Every text input is at least 16px at every breakpoint, enforced globally and checked by a test.
+
+---
+
+## 🔎 Universal Search
+
+- **Automatic Input Detection**  
+  One box works out whether it was given text, a Spotify link, a share link, a URI or an ISRC.
+
+- **Typo Tolerance**  
+  Misspelled queries still find the song; when nothing matches, the closest results are shown and labelled.
+
+- **Exact Recordings**  
+  Live, remastered, remixed and sped-up versions are listed separately, each with its own ISRC.
+
+- **No Invented Codes**  
+  If a catalog has no ISRC for a recording, the site says "ISRC unavailable for this recording."
+
+---
+
+## 🎵 Real Music Data
+
+- **Spotify Web API (primary)**  
+  Client Credentials flow on the server; the ISRC is read from `external_ids.isrc`.
+
+- **Deezer (fallback)**  
+  Answers text and ISRC searches when Spotify is not configured, rate limited or down.
+
+- **Labelled Sources**  
+  Every response comes from a single catalog and is marked "Data from Spotify" or "Data from Deezer".
+
+- **Spotify Requirements**  
+  The Spotify account that owns the app needs an active Premium subscription, and Development Mode quota is small and shared. Spotify links and URIs can only be resolved through Spotify.
+
+---
+
+## 🔐 Security
+
+- **Server-Only Credentials**  
+  Spotify secrets never reach the browser and are validated at build time.
+
+- **Validated Input**  
+  Every query passes a shared detector and Zod schemas before any upstream call.
+
+- **SSRF-Safe Share Links**  
+  Redirects are followed manually, over HTTPS, one hop at a time, to an allowlist of Spotify hosts only.
+
+- **Hardened Responses**  
+  Content Security Policy, HSTS, frame denial, per-client rate limiting and short-lived caching.
+
+---
+
+## 📈 SEO, AEO and GEO
+
+- **Metadata API**  
+  Titles, descriptions, canonical URLs, Open Graph and Twitter cards, and a generated social image.
+
+- **Crawl Files**  
+  `/sitemap.xml`, `/robots.txt` (API routes disallowed), `/manifest.webmanifest` and `/llms.txt`.
+
+- **Structured Data**  
+  A JSON-LD graph with `Organization`, `WebSite`, `WebApplication`, `WebPage` and `BreadcrumbList`. No ratings, reviews or usage figures.
+
+- **Answer Content**  
+  A seven-step guide and ten direct-answer questions rendered on the server, in the page HTML.
+
+---
+
+## 📁 Project Structure
+
+```
+Instagram-Song-Finder/
+├── app/                          # Next.js App Router
+│   ├── page.tsx                  # Home: search, guide, FAQ
+│   ├── about/ privacy/ terms/    # Informational pages
+│   ├── api/
+│   │   ├── search/route.ts       # Universal search endpoint
+│   │   └── track/route.ts        # Exact lookup by Spotify link or ISRC
+│   ├── sitemap.ts robots.ts manifest.ts
+│   ├── opengraph-image.tsx       # Generated social card
+│   └── globals.css               # Design tokens and all styles
+│
+├── components/                   # UI
+│   ├── SongFinder.tsx            # Hero + search panel
+│   ├── SearchResults.tsx         # Results list and states
+│   ├── ResultItem.tsx            # One recording with copy actions
+│   ├── TopAction.tsx             # Star on GitHub / Try now pill
+│   └── MobileTabBar.tsx          # Bottom navigation on phones
+│
+├── hooks/                        # useSongSearch, useCopy
+│
+├── lib/
+│   ├── search/                   # Input detection, ISRC helpers, resolution, typo tolerance
+│   ├── spotify/                  # Auth, catalog client, share-link resolver
+│   ├── deezer/                   # Fallback catalog client
+│   ├── music/                    # Provider contracts, errors, registry
+│   ├── api/                      # Route handlers and response contract
+│   ├── seo/                      # Metadata and structured data
+│   └── content/                  # FAQ and how-to copy
+│
+├── assets/brand/logo.webp        # Source logo for every icon
+├── scripts/generate-icons.mjs    # Favicon and app icon generator
+└── tests/
+    ├── unit/                     # Vitest
+    └── e2e/                      # Playwright
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Node.js** (v22.12+)
+- **Spotify Developer app** owned by an account with Spotify Premium (optional: without it the Deezer fallback serves text and ISRC searches)
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/zakisheriff/Instagram-Song-Finder.git
+cd Instagram-Song-Finder
+```
+
+### 2. Install Dependencies
 
 ```bash
 npm install
-cp .env.example .env.local   # then fill in the Spotify credentials
+```
+
+### 3. Environment Configuration
+
+Copy the example file and fill in your Spotify credentials:
+
+```bash
+cp .env.example .env.local
+```
+
+```env
+SPOTIFY_CLIENT_ID=your-spotify-client-id
+SPOTIFY_CLIENT_SECRET=your-spotify-client-secret
+# Optional. Default: spotify,deezer
+# MUSIC_PROVIDERS=spotify,deezer
+```
+
+Create the app at the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and select the Web API. Both values must be set together; the build fails if only one is present.
+
+### 4. Run the Application
+
+```bash
 npm run dev
 ```
 
-Open http://localhost:3000.
+Visit **http://localhost:3000** 🎉
 
-### Environment variables
+### 5. Run the Checks
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `SPOTIFY_CLIENT_ID` | For Spotify data | Client ID of your Spotify app |
-| `SPOTIFY_CLIENT_SECRET` | For Spotify data | Client secret of your Spotify app. Server-side only |
-| `MUSIC_PROVIDERS` | No | Comma-separated catalog order. Default `spotify,deezer`. Set to `spotify` to disable the fallback |
+```bash
+npm run lint
+npm run typecheck
+npm run test
+npx playwright install chromium webkit   # first time only
+npm run test:e2e
+```
 
-The two Spotify variables must be set together; the build fails if only one is present. Neither is ever sent to the browser. `.env*` files are git-ignored, apart from `.env.example`.
+---
 
-### Scripts
+## 🎯 Key Features
 
-| Command | What it does |
-| --- | --- |
-| `npm run dev` | Development server |
-| `npm run build` / `npm run start` | Production build and server |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | TypeScript, no emit |
-| `npm run test` | Unit and component tests (Vitest) |
-| `npm run test:e2e` | End-to-end tests (Playwright; builds the app first) |
-| `npm run test:all` | Lint, typecheck, unit tests and end-to-end tests |
-| `npm run icons` | Regenerates the favicon, app icons and logo files from `assets/brand/logo.webp` |
+### For Visitors
 
-Before the first end-to-end run, install the browsers once: `npx playwright install chromium webkit`.
+✅ **Universal Search** — Title, artist, keywords, Spotify link, share link, URI or ISRC  
+✅ **Search As You Type** — Debounced, cancellable, with loading and error states  
+✅ **Typo Tolerance** — Misspellings still find the right song  
+✅ **One-Click Copy** — Copies the full `isrc:CODE` string  
+✅ **Copy and Open Instagram** — Copies the code, then opens Instagram  
+✅ **Version Labels** — Live, Remastered, Remix, Sped up and more  
+✅ **No Account** — No login, no tracking cookies  
 
-## Music data
+### For Maintainers
 
-### Spotify (primary)
+✅ **Provider Layer** — Add a catalog by implementing one interface  
+✅ **Automatic Fallback** — Keeps working when the primary catalog is unavailable  
+✅ **Typed API** — Consistent success and error responses  
+✅ **Full Test Suite** — Unit, component and cross-browser end-to-end tests  
 
-The site uses the official [Spotify Web API](https://developer.spotify.com/documentation/web-api) with the Client Credentials flow: the server exchanges the client ID and secret for an app token, keeps it in memory, and requests a new one shortly before it expires or if Spotify answers `401`.
+---
 
-| Need | Endpoint |
-| --- | --- |
-| Text search | `GET /v1/search?type=track&q=…` |
-| ISRC lookup | `GET /v1/search?type=track&q=isrc:CODE` |
-| Exact track from a link or URI | `GET /v1/tracks/{id}` |
+## 🔧 Tech Stack
 
-The ISRC is read from `external_ids.isrc`.
+### Application
+- **Next.js 16** — App Router, Server Components, Cache Components
+- **React 19** — Client components for the interactive search
+- **TypeScript** — Strict mode
+- **Plain CSS** — Design tokens from the reference capture
+- **Zod** — Input and environment validation
 
-Things to know about Spotify's current rules (checked October 2026):
+### Data
+- **Spotify Web API** — Primary catalog
+- **Deezer API** — Fallback catalog
 
-- **Premium is required.** A Development Mode app only works while its owner has an active Spotify Premium subscription.
-- **Quota is small and shared.** Development Mode quota is counted per developer account. Extended quota is available to qualifying organisations only. A public site can therefore hit `429` responses under real traffic.
-- **Search pages are capped at 10 results.** The interface pages through results with "Show more results".
-- No `market` parameter is sent, on purpose: with a market Spotify may relink a track to a regional alternative, which can be a different recording with a different ISRC.
+### Quality
+- **Vitest** + **Testing Library** — Unit and component tests
+- **Playwright** — Desktop Chrome and Safari, iPhone Safari, Android Chrome, tablet
+- **GitHub Actions** — Lint, typecheck, tests and build on every push
 
-To set it up, create an app in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), select the Web API, and copy the client ID and secret into the environment variables above. No redirect URI or user login is needed.
+---
 
-### Deezer (fallback)
+## 🔒 Security Features
 
-[Deezer's public API](https://developers.deezer.com/api) needs no credentials and also returns ISRCs. It answers text and ISRC searches when Spotify is not configured, is rate limited or is down, so the site keeps working. Limits of the fallback:
+✅ **Server-Side Secrets** — Never bundled for the browser  
+✅ **Build-Time Environment Validation** — Broken configuration fails fast  
+✅ **Restricted Outbound Hosts** — Spotify and Deezer APIs and Spotify share hosts only  
+✅ **SSRF Protection** — Manual, allowlisted redirect following  
+✅ **Rate Limiting** — 60 requests a minute per client, per server instance  
+✅ **Security Headers** — CSP, HSTS, `X-Frame-Options`, `nosniff`  
 
-- Spotify links, share links and URIs can only be resolved through Spotify. Without Spotify credentials those inputs return a clear "can't be looked up right now" message rather than a guessed match.
-- Deezer's search results list only the primary artist.
+The built-in rate limiter keeps its counters in server memory, so on serverless hosting each instance counts separately. For a hard global limit, add edge rate limiting at your host.
 
-A response always comes from a single catalog and the interface labels it ("Data from Spotify" or "Data from Deezer"). Results from different catalogs are never blended.
+---
 
-### Adding another provider
+## 📜 API Documentation
 
-Implement the `MusicProvider` interface in `lib/music/types.ts`, add its id to `ProviderId` and to the schema in `lib/env.ts`, and register it in `lib/music/registry.ts`. Nothing else in the app depends on a specific catalog.
+### Endpoints
+- `GET /api/search?q=<anything>&offset=<n>&provider=<spotify|deezer>` — Universal search
+- `GET /api/track?url=<spotify link, share link or URI>` — Exact recording
+- `GET /api/track?isrc=<code>` — Recordings with that ISRC
 
-### Third-party terms to review before launch
-
-- **Spotify Developer Terms and Design Guidelines.** Metadata and artwork are shown unmodified, link back to Spotify and are attributed in text. Spotify's guidelines also ask for the Spotify logo next to its content. The logo is not bundled here, because third-party logos were deliberately not recreated; download the official asset from Spotify's brand resources and place it beside the "Data from Spotify" label if you rely on Spotify data.
-- **Deezer API terms**, if you keep the fallback enabled.
-- **Caching.** Catalog responses are cached for a few minutes only (in memory and at the CDN) to absorb bursts. Nothing is stored long term.
-
-## API
-
-Both routes are `GET`, return JSON, are rate limited per client (60 requests a minute per server instance) and are excluded from indexing.
-
-`/api/search?q=<anything>&offset=<n>&provider=<spotify|deezer>` is the universal endpoint used by the page.
-
-`/api/track?url=<spotify link, share link or URI>` or `/api/track?isrc=<code>` looks up exact recordings.
-
-Success:
+### Success
 
 ```json
 {
@@ -128,94 +307,83 @@ Success:
 }
 ```
 
-Failure:
+### Errors
 
 ```json
 { "ok": false, "error": { "code": "RATE_LIMITED", "message": "…", "retryAfterSeconds": 20 } }
 ```
 
-| Code | HTTP | Meaning |
-| --- | --- | --- |
-| `INVALID_INPUT` | 400 | Empty, too long, malformed ISRC, non-track or non-Spotify link |
-| `NOT_FOUND` | 404 | No recording for that ISRC or track id |
-| `UNRESOLVABLE_LINK` | 422 | A share link that could not be followed safely |
-| `RATE_LIMITED` | 429 | Client or catalog rate limit; includes `Retry-After` |
-| `PROVIDER_AUTH`, `PROVIDER_UNAVAILABLE` | 502 | The catalog rejected or failed the request |
-| `NOT_CONFIGURED` | 503 | No catalog can answer, for example a Spotify link without credentials |
-| `PROVIDER_TIMEOUT` | 504 | The catalog did not answer in time |
+- `INVALID_INPUT` (400) — Empty, too long, malformed ISRC, non-track or non-Spotify link
+- `NOT_FOUND` (404) — No recording for that ISRC or track id
+- `UNRESOLVABLE_LINK` (422) — A share link that could not be followed safely
+- `RATE_LIMITED` (429) — Client or catalog rate limit, with `Retry-After`
+- `PROVIDER_AUTH`, `PROVIDER_UNAVAILABLE` (502) — The catalog rejected or failed the request
+- `NOT_CONFIGURED` (503) — No catalog can answer
+- `PROVIDER_TIMEOUT` (504) — The catalog did not answer in time
 
-## Project structure
+---
 
-```
-app/                 Pages, API routes, sitemap, robots, manifest, icons, social image
-components/          UI: hero, search panel, results, content sections, footer
-hooks/               useSongSearch (debounce, cancellation, paging) and useCopy
-lib/search/          Input detection, ISRC helpers, query resolution
-lib/spotify/         Authentication, catalog client, share-link resolver
-lib/deezer/          Fallback catalog client
-lib/music/           Provider contracts, errors, registry, formatting
-lib/api/             Route handlers, response contract
-lib/seo/             Metadata and structured data builders
-lib/content/         FAQ and how-to copy
-tests/unit/          Vitest suites
-tests/e2e/           Playwright suites
-```
+## 🌐 Deployment
 
-## Security
+### Vercel
+1. Import the GitHub repository; the Next.js defaults are correct
+2. Add `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` under **Settings → Environment Variables**
+3. Add `instagramsongfinder.theatom.lk` under **Settings → Domains**
 
-- Credentials are read only on the server and validated at build time and start-up.
-- Every query is validated with a shared detector and Zod before any upstream call.
-- Outbound requests go only to `accounts.spotify.com`, `api.spotify.com`, `api.deezer.com` and, for share links, `spotify.link`, `spotify.app.link` and `open.spotify.com`. Share-link redirects are followed manually, one hop at a time, over HTTPS, and only to those hosts, so a redirect cannot reach an internal address.
-- Upstream calls have timeouts, bounded retries with backoff and in-flight deduplication.
-- Responses carry a Content Security Policy, HSTS, `X-Frame-Options: DENY` and related headers.
-- No accounts, no tracking cookies, no analytics.
+### DNS
+1. At the DNS provider for `theatom.lk`, create the `CNAME` record Vercel shows for `instagramsongfinder`
+2. Wait for Vercel to verify the domain and issue the HTTPS certificate
+3. Redeploy if the environment variables were added after the first build
 
-The built-in rate limiter keeps its counters in server memory, so on serverless hosting each instance counts separately. It stops bursts and loops. For a hard global limit, add your host's edge rate limiting (for example Vercel Firewall) or back `RateLimiter` with a shared store.
+### After Going Live
+1. Search by title, paste a Spotify link and paste an ISRC on the live site
+2. Open `/robots.txt`, `/sitemap.xml` and `/opengraph-image`
+3. Submit the sitemap in Google Search Console and Bing Webmaster Tools
 
-## SEO, AEO and GEO
+---
 
-- Next.js Metadata API: titles, descriptions, canonical URLs, Open Graph and Twitter cards, robots directives, icons and a generated social image
-- `/sitemap.xml`, `/robots.txt` (API routes disallowed) and `/manifest.webmanifest`
-- JSON-LD graph with `Organization`, `WebSite`, `WebApplication` and `WebPage`, plus `BreadcrumbList` on sub-pages. No ratings, reviews or usage figures
-- A seven-step guide and ten direct-answer questions rendered on the server, in the page HTML
-- `/llms.txt` as a supplementary summary for AI crawlers
+## ⚖️ Third-Party Notes
 
-`FAQPage` markup is intentionally absent: Google limits FAQ rich results to authoritative government and health sites, so adding it here would not be appropriate.
+- Instagram Song Finder is an independent tool by The Atom. It is not affiliated with, endorsed by or sponsored by Instagram, Meta or Spotify.
+- The site name is shown with the Instagram wordmark, a trademark of Meta Platforms, Inc. Meta's brand guidelines restrict using its marks inside another product's name, so that use is the site owner's responsibility.
+- Spotify's guidelines ask for a link back and attribution wherever its data is shown; results from Spotify keep an "Open in Spotify" button for that reason.
+- Catalog responses are cached for a few minutes only. Nothing is stored long term.
 
-## Design reference
+---
 
-The interface reproduces the layout, spacing, colours, type scale and component shapes recorded in the supplied reference capture (`styles/layout.json` for desktop, `styles/layout.mobile.json` for phones): the two-column hero and form panel, 60px fields with a 16px radius and floating label, 44px pill buttons in three styles, the footer link row, and on phones the centred landing with the bottom tab bar.
+## 🤝 Contributing
 
-The app logo (`assets/brand/logo.webp`) appears top-left on desktop and is the source for the favicon, touch and install icons, the social sharing image and the `image` in the structured data. To change it, replace that file and run `npm run icons`.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-The site name is shown as a lockup: the Instagram wordmark from the capture followed by "Song Finder" (`components/SiteLockup.tsx`). The wordmark is a trademark of Meta Platforms, Inc. Meta's brand guidelines restrict using its marks inside another product's name or logo, so the owner of this site is responsible for that use; replacing the drawing with plain text is a one-component change.
+Found a bug or have an idea? Email **info@theatom.lk**.
 
-The hero illustration is the owner-supplied image `public/hero.webp`. Meta's proprietary typefaces from the capture are not used: the reference's own system-font fallback is used for the interface and Figtree for the headline.
+---
 
-The capture folder `www.instagram.com-clone/` is git-ignored for the same reason and is not needed to build or run the site.
+## 📄 License
 
-Every text input is at least 16px at every breakpoint, enforced globally in `app/globals.css` and checked by an end-to-end test, so iOS Safari does not zoom on focus.
+No open-source license has been added to this repository yet. Until one is, all rights are reserved by The Atom.
 
-## Deployment
+---
 
-The app is a standard Next.js project and runs on any Node.js host. On Vercel:
+## ☕️ Support the Project
 
-1. Import the GitHub repository into Vercel. The defaults (framework Next.js, build `next build`) are correct.
-2. In **Settings → Environment Variables**, add `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` for Production (and Preview if wanted).
-3. In **Settings → Domains**, add `instagramsongfinder.theatom.lk`.
-4. At the DNS provider for `theatom.lk`, create the record Vercel shows for that domain. For a subdomain this is a `CNAME`:
+If Instagram Song Finder saved you time or helped you find the right track:
 
-   | Type | Name | Value |
-   | --- | --- | --- |
-   | `CNAME` | `instagramsongfinder` | the target shown by Vercel (commonly `cname.vercel-dns.com`) |
+- Consider buying me a coffee
+- It keeps development alive and motivates future updates
 
-5. Wait for Vercel to verify the domain and issue the HTTPS certificate, then redeploy if the environment variables were added after the first build.
+<div align="center">
+<a href="https://buymeacoffee.com/theoneatom">
+<img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="60" width="217">
+</a>
+</div>
 
-After the first deployment:
+---
 
-- Search for a song, paste a Spotify link and paste an ISRC on the live site.
-- Open `/robots.txt`, `/sitemap.xml` and `/opengraph-image`.
-- Submit `https://instagramsongfinder.theatom.lk/sitemap.xml` in Google Search Console and Bing Webmaster Tools.
-- Validate the home page with the [Rich Results Test](https://search.google.com/test/rich-results) or the [Schema Markup Validator](https://validator.schema.org/).
+<p align="center">
+Made by <strong>Zaki Sheriff</strong>
+</p>
 
-Canonical URLs, the sitemap and social tags always use the production domain, set in `lib/site.ts`.
+<p align="center">
+<em>Because the right song should be easy to find.</em>
+</p>
