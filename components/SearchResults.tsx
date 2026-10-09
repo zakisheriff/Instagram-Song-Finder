@@ -28,7 +28,7 @@ function Skeleton() {
 
 function statusText(search: SongSearch): string {
   if (search.status === "loading") return "Searching…";
-  if (search.status === "error") return search.error ?? "";
+  // Errors are announced by the alert below, so they are not repeated here.
   if (search.status !== "success" || !search.result) return "";
   const count = search.result.tracks.length;
   if (count === 0) return "No songs found.";
