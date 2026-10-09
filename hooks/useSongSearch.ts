@@ -27,10 +27,6 @@ export interface SongSearch {
   /** True when the current text is worth submitting. */
   canSubmit: boolean;
   setQuery: (value: string) => void;
-  /** Shows text in the box without searching, e.g. words still being spoken. */
-  showText: (value: string) => void;
-  /** Puts text in the box and searches for it straight away. */
-  searchFor: (value: string) => void;
   submit: () => void;
   clear: () => void;
   loadMore: () => void;
@@ -176,23 +172,6 @@ export function useSongSearch(): SongSearch {
 
   const submit = useCallback(() => void run(query), [run, query]);
 
-  const showText = useCallback(
-    (value: string) => {
-      cancelPending();
-      latestRun.current += 1;
-      setQueryState(value);
-    },
-    [cancelPending],
-  );
-
-  const searchFor = useCallback(
-    (value: string) => {
-      setQueryState(value);
-      void run(value);
-    },
-    [run],
-  );
-
   const clear = useCallback(() => {
     cancelPending();
     latestRun.current += 1;
@@ -251,8 +230,6 @@ export function useSongSearch(): SongSearch {
     ...state,
     canSubmit: query.trim().length > 0,
     setQuery,
-    showText,
-    searchFor,
     submit,
     clear,
     loadMore: () => void loadMore(),

@@ -412,30 +412,9 @@ select {
   }
 }
 
-/* A shorter wording is swapped in on phones, where the microphone leaves less room. */
+/* A shorter wording is swapped in on narrow phone screens. */
 .field__label-short {
   display: none;
-}
-
-/* Room for the microphone, so the floating label never runs underneath it. */
-.field--voice .field__label {
-  right: 52px;
-}
-
-.field__action--mic.is-listening {
-  background: var(--color-blue);
-  color: #fff;
-  animation: mic-pulse 1.4s ease-out infinite;
-}
-
-@keyframes mic-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(0, 100, 224, 0.45);
-  }
-
-  100% {
-    box-shadow: 0 0 0 12px rgba(0, 100, 224, 0);
-  }
 }
 
 .search__message {
@@ -1495,17 +1474,11 @@ select {
     margin: 32px 40px 0;
   }
 
-  /* Keeps the label readable next to the microphone on narrow phones. */
-  .field--voice .field__label {
-    font-size: 14px;
-    right: 48px;
-  }
-
-  .field--voice .field__label-full {
+  .field__label-full {
     display: none;
   }
 
-  .field--voice .field__label-short {
+  .field__label-short {
     display: inline;
   }
 

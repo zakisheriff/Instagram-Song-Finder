@@ -226,29 +226,6 @@ test("a link to a question opens it", async ({ page }) => {
   await expect(page.getByText("defined by the ISO 3901 standard", { exact: false })).toBeVisible();
 });
 
-test("the voice button sits inside the field without covering its label", async ({ page }) => {
-  await page.addInitScript(() => {
-    // Stand-in so the button renders in every test browser.
-    (window as unknown as { webkitSpeechRecognition: unknown }).webkitSpeechRecognition = class {
-      start() {}
-      stop() {}
-      abort() {}
-    };
-  });
-  await page.goto("/");
-  const mic = page.getByRole("button", { name: "Search by voice" });
-  await expect(mic).toBeVisible();
-
-  const field = await page.locator(".field").boundingBox();
-  const micBox = await mic.boundingBox();
-  const label = page.locator(".field__label");
-  const labelBox = await label.boundingBox();
-  expect(micBox!.x + micBox!.width).toBeLessThanOrEqual(field!.x + field!.width);
-  expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(micBox!.x);
-  // The whole label is readable, not cut off with an ellipsis.
-  expect(await label.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
-});
-
 test("tapping controls never shows the default grey tap box", async ({ page }) => {
   await page.goto("/");
   const colours = await page.evaluate(() =>

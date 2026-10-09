@@ -34,14 +34,6 @@ export default function PrivacyPage() {
         search text only.
       </p>
 
-      <h2>Voice search</h2>
-      <p>
-        The microphone button uses the speech recognition built into your browser and only
-        listens after you tap it. This site does not record or store audio; it receives the
-        recognised text only. Depending on your browser, the audio may be processed by the browser
-        maker&apos;s servers, for example Google&apos;s in Chrome or Apple&apos;s in Safari.
-      </p>
-
       <h2>Technical data</h2>
       <p>
         Your IP address is used in memory for a short time to limit abusive request rates. The

@@ -48,6 +48,5 @@ export const facts: Fact[] = [
   { title: "No account", detail: "Nothing to sign up for, and it never asks for your Instagram or Spotify login." },
   { title: "Real catalog data", detail: "Codes come straight from music catalogs. Nothing is guessed or generated." },
   { title: "One tap to copy", detail: "The code is copied with the isrc: prefix already added, ready to paste." },
-  { title: "Search by voice", detail: "Tap the microphone and say the song name instead of typing it." },
   { title: "Typo friendly", detail: "Misspell the title or the artist and it still finds the song you meant." },
 ];

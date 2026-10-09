@@ -17,7 +17,6 @@ A visitor identifies one specific recording of a song and gets its ISRC with the
 All of these go into the same search box, which works out what it was given.
 
 - Song title, artist name, both together, part of a title, or keywords
-- Voice: tap the microphone and say the song name (in browsers with built-in speech recognition, such as Chrome and Safari)
 - An ISRC, written plain (`USUM72409273`), hyphenated (`US-UM7-24-09273`) or prefixed (`isrc:USUM72409273`)
 - A song link from a music service:
   - Spotify track links, share links and `spotify:track:` URIs: the exact recording when Spotify's catalog is reachable, otherwise a title search presented as possible matches
@@ -55,7 +54,7 @@ Song metadata and ISRC codes come from the official Spotify Web API where that i
 
 ## How to use the code on Instagram
 
-1. Search for the song, say its name, or paste its link.
+1. Search for the song or paste its link.
 2. Select the correct recording, using the details and the preview clip to confirm it.
 3. Copy the `isrc:` string.
 4. Open Instagram and start a Story or a Reel.
@@ -73,9 +72,9 @@ Song metadata and ISRC codes come from the official Spotify Web API where that i
 
 - [Home and search](https://instagramsongfinder.theatom.lk/): the search tool, a step-by-step guide, the supported link services and frequently asked questions
 - [About](https://instagramsongfinder.theatom.lk/about): what the tool does, who publishes it and where its data comes from
-- [Privacy](https://instagramsongfinder.theatom.lk/privacy): how searches, voice input, previews and technical data are handled
+- [Privacy](https://instagramsongfinder.theatom.lk/privacy): how searches, previews and technical data are handled
 - [Terms of use](https://instagramsongfinder.theatom.lk/terms): conditions for using the service
 
 ## Privacy in brief
 
-No accounts and no advertising or tracking cookies. Voice input is turned into text by the visitor's own browser; the site receives the text only and stores no audio. Visits are counted with cookieless analytics.
+No accounts and no advertising or tracking cookies. Visits are counted with cookieless analytics.

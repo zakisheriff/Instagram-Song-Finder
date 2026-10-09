@@ -7,7 +7,7 @@ export const howToSteps: HowToStep[] = [
   {
     title: "Search for the song or paste its link",
     detail:
-      "Type a title, an artist, a few keywords or an ISRC into the search box, tap the microphone and say the song name, or paste a song link from Spotify, Apple Music, YouTube, YouTube Music, Deezer or SoundCloud.",
+      "Type a title, an artist, a few keywords or an ISRC into the search box, or paste a song link from Spotify, Apple Music, YouTube, YouTube Music, Deezer or SoundCloud.",
   },
   {
     title: "Select the correct recording",

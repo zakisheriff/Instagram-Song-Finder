@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { useSongSearch } from "@/hooks/useSongSearch";
-import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import { SEARCH_INPUT_ID } from "@/lib/search/constants";
 import { MAX_QUERY_LENGTH } from "@/lib/search/detect";
 import { site } from "@/lib/site";
 import { FeedbackLinks } from "./FeedbackLinks";
 import { HeroCollage } from "./HeroCollage";
-import { CloseIcon, MicIcon } from "./icons";
+import { CloseIcon } from "./icons";
 import { SearchResults } from "./SearchResults";
 import { SiteLockup } from "./SiteLockup";
 import { SiteLogo } from "./SiteLogo";
@@ -29,8 +28,6 @@ interface SongFinderProps {
  */
 export function SongFinder({ headline }: SongFinderProps) {
   const search = useSongSearch();
-  // Words appear as they are spoken; the search runs once, on the finished phrase.
-  const voice = useVoiceSearch({ onHearing: search.showText, onHeard: search.searchFor });
   const [pickedId, setPickedId] = useState<string | null>(null);
   const messageId = useId();
 
@@ -40,8 +37,6 @@ export function SongFinder({ headline }: SongFinderProps) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    // Pressing Search always ends voice input.
-    voice.stop();
     if (search.canSubmit) search.submit();
   }
 
@@ -69,20 +64,14 @@ export function SongFinder({ headline }: SongFinderProps) {
         </h2>
 
         <form className="search" role="search" onSubmit={handleSubmit} noValidate>
-          <div
-            className={`field${search.inputError ? " field--error" : ""}${voice.supported ? " field--voice" : ""}`}
-          >
+          <div className={`field${search.inputError ? " field--error" : ""}`}>
             <input
               id={SEARCH_INPUT_ID}
               className="field__input"
               type="search"
               name="q"
               value={search.query}
-              onChange={(event) => {
-                // Typing takes over from voice input.
-                voice.stop();
-                search.setQuery(event.target.value);
-              }}
+              onChange={(event) => search.setQuery(event.target.value)}
               placeholder=" "
               maxLength={MAX_QUERY_LENGTH * 4}
               autoComplete="off"
@@ -96,22 +85,15 @@ export function SongFinder({ headline }: SongFinderProps) {
               aria-describedby={messageId}
             />
             <label className="field__label" htmlFor={SEARCH_INPUT_ID}>
-              {voice.listening ? (
-                "Listening… say the song name"
-              ) : (
-                <>
-                  <span className="field__label-full">{FIELD_LABEL}</span>
-                  <span className="field__label-short">Song name, artist, link or ISRC</span>
-                </>
-              )}
+              <span className="field__label-full">{FIELD_LABEL}</span>
+              <span className="field__label-short">Song name, artist, link or ISRC</span>
             </label>
             {search.status === "loading" ? (
               <span className="field__action" aria-hidden="true">
                 <span className="spinner" />
               </span>
             ) : (
-              search.query.length > 0 &&
-              !voice.listening && (
+              search.query.length > 0 && (
                 <button
                   type="button"
                   className="field__action"
@@ -125,21 +107,10 @@ export function SongFinder({ headline }: SongFinderProps) {
                 </button>
               )
             )}
-            {voice.supported && (
-              <button
-                type="button"
-                className={`field__action field__action--mic${voice.listening ? " is-listening" : ""}`}
-                aria-label={voice.listening ? "Stop listening" : "Search by voice"}
-                aria-pressed={voice.listening}
-                onClick={voice.toggle}
-              >
-                <MicIcon size={18} />
-              </button>
-            )}
           </div>
 
           <p className="search__message" id={messageId} role="alert">
-            {search.inputError ?? voice.error}
+            {search.inputError}
           </p>
 
           <button
