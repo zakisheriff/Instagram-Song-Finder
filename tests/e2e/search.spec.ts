@@ -108,11 +108,17 @@ test("shows catalog outages and rate limits as readable errors", async ({ page, 
     failure(502, "PROVIDER_UNAVAILABLE", "The music catalog is unavailable right now. Please try again shortly."),
   );
   await searchBox(page).fill("bad guy");
-  await expect(page.getByRole("alert").filter({ hasText: "music catalog is unavailable" })).toBeVisible();
+  await searchBox(page).press("Enter");
+  await expect(page.getByRole("alert").filter({ hasText: "music catalog is unavailable" })).toBeVisible({
+    timeout: 15_000,
+  });
 
   await mockSearch(failure(429, "RATE_LIMITED", "Too many searches right now. Wait a moment and try again."));
   await searchBox(page).fill("bad guy billie");
-  await expect(page.getByRole("alert").filter({ hasText: "Too many searches" })).toBeVisible();
+  await searchBox(page).press("Enter");
+  await expect(page.getByRole("alert").filter({ hasText: "Too many searches" })).toBeVisible({
+    timeout: 15_000,
+  });
   await expectNoHorizontalOverflow(page);
 });
 

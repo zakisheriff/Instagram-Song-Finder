@@ -15,6 +15,9 @@ import { SiteLockup } from "./SiteLockup";
 import { SiteLogo } from "./SiteLogo";
 
 
+/** What the search box accepts. Also its accessible name at every screen size. */
+const FIELD_LABEL = "Song name, artist, music link or ISRC";
+
 interface SongFinderProps {
   /** Server-rendered `<h1>` so the headline is in the initial HTML. */
   headline: ReactNode;
@@ -88,11 +91,19 @@ export function SongFinder({ headline }: SongFinderProps) {
               spellCheck={false}
               enterKeyHint="search"
               inputMode="search"
+              aria-label={FIELD_LABEL}
               aria-invalid={search.inputError ? true : undefined}
               aria-describedby={messageId}
             />
             <label className="field__label" htmlFor={SEARCH_INPUT_ID}>
-              {voice.listening ? "Listening… say the song name" : "Song name, artist, music link or ISRC"}
+              {voice.listening ? (
+                "Listening… say the song name"
+              ) : (
+                <>
+                  <span className="field__label-full">{FIELD_LABEL}</span>
+                  <span className="field__label-short">Song name, artist, link or ISRC</span>
+                </>
+              )}
             </label>
             {search.status === "loading" ? (
               <span className="field__action" aria-hidden="true">
