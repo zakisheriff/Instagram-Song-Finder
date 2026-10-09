@@ -81,6 +81,35 @@ test("on phones the landing fills the first screen and the guide starts below it
   expect(guide!.y).toBeGreaterThanOrEqual(tabBar!.y);
 });
 
+test("the tab bar highlights the tab for what is on screen", async ({ page }) => {
+  test.skip(!isPhoneLayout(page), "phone layout only");
+  await page.goto("/");
+  const tabBar = page.getByRole("navigation", { name: "Sections" });
+  const tab = (name: string) => tabBar.getByRole(name === "Search for a song" ? "button" : "link", { name });
+  const activeTabs = () =>
+    tabBar.locator("[aria-current]").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label")));
+
+  await expect.poll(activeTabs).toEqual(["Home"]);
+
+  await tab("How it works").click();
+  await expect.poll(activeTabs).toEqual(["How it works"]);
+
+  await tab("Frequently asked questions").click();
+  await expect.poll(activeTabs).toEqual(["Frequently asked questions"]);
+
+  await tab("Search for a song").click();
+  await expect(searchBox(page)).toBeFocused();
+  await expect.poll(activeTabs).toEqual(["Search for a song"]);
+
+  await searchBox(page).blur();
+  await tab("Home").click();
+  await expect.poll(activeTabs).toEqual(["Home"]);
+
+  await tab("About").click();
+  await expect(page).toHaveURL(/\/about$/);
+  await expect.poll(activeTabs).toEqual(["About"]);
+});
+
 test("matches the reference field and button metrics", async ({ page }) => {
   await page.goto("/");
   const field = await page.locator(".field").boundingBox();

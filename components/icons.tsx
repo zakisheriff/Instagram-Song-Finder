@@ -18,39 +18,46 @@ function base({ size = 24, ...props }: IconProps): SVGProps<SVGSVGElement> {
   };
 }
 
-export const HomeIcon = (props: IconProps) => (
+/** Tab bar icons draw outlined by default and filled or heavier when `active`. */
+type TabIconProps = IconProps & { active?: boolean };
+
+export const HomeIcon = ({ active, ...props }: TabIconProps) => (
   <svg {...base(props)}>
-    <path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z" fill="currentColor" />
+    <path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z" fill={active ? "currentColor" : "none"} />
   </svg>
 );
 
-export const SearchIcon = (props: IconProps) => (
-  <svg {...base(props)}>
+export const SearchIcon = ({ active, ...props }: TabIconProps) => (
+  <svg {...base(props)} strokeWidth={active ? 3 : 2}>
     <circle cx="10.5" cy="10.5" r="7" />
     <path d="m16 16 5.5 5.5" />
   </svg>
 );
 
-export const StepsIcon = (props: IconProps) => (
-  <svg {...base(props)}>
+export const StepsIcon = ({ active, ...props }: TabIconProps) => (
+  <svg {...base(props)} strokeWidth={active ? 3 : 2}>
     <path d="M9 6h12M9 12h12M9 18h12" />
-    <path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" strokeWidth={3} />
+    <path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" strokeWidth={active ? 4 : 3} />
   </svg>
 );
 
-export const QuestionIcon = (props: IconProps) => (
+export const QuestionIcon = ({ active, ...props }: TabIconProps) => (
   <svg {...base(props)}>
-    <circle cx="12" cy="12" r="9.5" />
-    <path d="M9.2 9.2a2.9 2.9 0 1 1 4.3 2.5c-.9.5-1.5 1.1-1.5 2.1" />
-    <path d="M12 17.2h.01" strokeWidth={3} />
+    <circle cx="12" cy="12" r="9.5" fill={active ? "currentColor" : "none"} />
+    <g stroke={active ? "#fff" : "currentColor"}>
+      <path d="M9.2 9.2a2.9 2.9 0 1 1 4.3 2.5c-.9.5-1.5 1.1-1.5 2.1" />
+      <path d="M12 17.2h.01" strokeWidth={3} />
+    </g>
   </svg>
 );
 
-export const InfoIcon = (props: IconProps) => (
+export const InfoIcon = ({ active, ...props }: TabIconProps) => (
   <svg {...base(props)}>
-    <circle cx="12" cy="12" r="9.5" />
-    <path d="M12 11v6" />
-    <path d="M12 7.3h.01" strokeWidth={3} />
+    <circle cx="12" cy="12" r="9.5" fill={active ? "currentColor" : "none"} />
+    <g stroke={active ? "#fff" : "currentColor"}>
+      <path d="M12 11v6" />
+      <path d="M12 7.3h.01" strokeWidth={3} />
+    </g>
   </svg>
 );
 
