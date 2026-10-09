@@ -1000,8 +1000,8 @@ select {
 }
 
 .subpage__back {
-  margin-top: 32px;
   max-width: 320px;
+  margin: 32px auto 0;
 }
 
 /* ---------- Footer ---------- */
@@ -1155,6 +1155,10 @@ select {
 
   .subpage__header {
     padding: 20px 14px 0;
+  }
+
+  .subpage__back {
+    max-width: none;
   }
 
   .tabbar {
