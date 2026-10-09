@@ -49,4 +49,5 @@ export const facts: Fact[] = [
   { title: "Real catalog data", detail: "Codes come straight from music catalogs. Nothing is guessed or generated." },
   { title: "One tap to copy", detail: "The code is copied with the isrc: prefix already added, ready to paste." },
   { title: "Typo friendly", detail: "Misspell the title or the artist and it still finds the song you meant." },
+  { title: "Version aware", detail: "Live, remastered, remixed and sped-up recordings stay separate, each with its own code." },
 ];
