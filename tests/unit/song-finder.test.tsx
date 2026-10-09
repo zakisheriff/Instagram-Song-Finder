@@ -305,7 +305,7 @@ describe("song preview", () => {
   const withClip = () =>
     success([track({ provider: "deezer", previewUrl: CLIP })], { provider: { id: "deezer", name: "Deezer" } });
 
-  it("plays and pauses the catalog's preview clip, with attribution", async () => {
+  it("plays and pauses the catalog's preview clip", async () => {
     vi.stubGlobal("Audio", FakeAudio);
     mockApi({ body: withClip() });
     const { user, input } = setup();
@@ -314,7 +314,6 @@ describe("song preview", () => {
     await user.click(await screen.findByRole("button", { name: "Play preview" }));
     expect(FakeAudio.last!.src).toBe(CLIP);
     expect(FakeAudio.last!.play).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("30-second preview from Deezer")).toBeInTheDocument();
 
     await user.click(await screen.findByRole("button", { name: "Pause preview" }));
     expect(FakeAudio.last!.pause).toHaveBeenCalled();
@@ -357,21 +356,42 @@ describe("song preview", () => {
 });
 
 describe("voice search", () => {
+  type Result = { isFinal: boolean; 0: { transcript: string } };
+
+  /** Behaves like a well-mannered browser: `stop()` is followed by the end signal. */
   class FakeRecognition {
+    static created = 0;
     static last: FakeRecognition | null = null;
+    /** When false, mimics browsers that never confirm a session has ended. */
+    static confirmsEnd = true;
     lang = "";
     continuous = true;
     interimResults = false;
     maxAlternatives = 0;
-    onresult: ((event: { results: Array<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null = null;
+    onresult: ((event: { results: Result[] }) => void) | null = null;
     onerror: ((event: { error: string }) => void) | null = null;
     onend: (() => void) | null = null;
     start = vi.fn();
     abort = vi.fn();
-    stop = vi.fn(() => this.onend?.());
+    stop = vi.fn(() => {
+      if (FakeRecognition.confirmsEnd) this.onend?.();
+    });
     constructor() {
+      FakeRecognition.created += 1;
       FakeRecognition.last = this;
     }
+    say(transcript: string, isFinal: boolean) {
+      this.onresult?.({ results: [{ isFinal, 0: { transcript } }] });
+    }
+  }
+
+  const mic = () => screen.findByRole("button", { name: "Search by voice" });
+
+  function useFake() {
+    FakeRecognition.created = 0;
+    FakeRecognition.last = null;
+    FakeRecognition.confirmsEnd = true;
+    vi.stubGlobal("webkitSpeechRecognition", FakeRecognition);
   }
 
   it("hides the microphone where the browser has no speech recognition", async () => {
@@ -381,67 +401,107 @@ describe("voice search", () => {
     expect(screen.queryByRole("button", { name: "Search by voice" })).not.toBeInTheDocument();
   });
 
-  it("searches for what was said", async () => {
-    vi.stubGlobal("webkitSpeechRecognition", FakeRecognition);
+  it("shows words as they are spoken and searches once, for the finished phrase", async () => {
+    useFake();
     const fetchMock = mockApi({ body: success([track()]) });
     const { user, input } = setup();
 
-    await user.click(await screen.findByRole("button", { name: "Search by voice" }));
+    await user.click(await mic());
     const session = FakeRecognition.last!;
-    expect(session.start).toHaveBeenCalled();
-    expect(session.interimResults).toBe(true);
+    expect(session.start).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "Stop listening" })).toHaveAttribute("aria-pressed", "true");
 
-    act(() => {
-      session.onresult?.({ results: [{ isFinal: true, 0: { transcript: "die with a smile" } }] });
-      session.onend?.();
-    });
-    expect(input).toHaveValue("die with a smile");
+    act(() => session.say("die with", false));
+    expect(input).toHaveValue("die with");
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    // Browsers tend to capitalise and punctuate; the search gets the plain phrase.
+    act(() => session.say("Die with a smile.", true));
+    expect(input).toHaveValue("Die with a smile");
     await screen.findByRole("region", { name: "Search results" });
-    expect(requestedParams(fetchMock).get("q")).toBe("die with a smile");
-    expect(screen.getByRole("button", { name: "Search by voice" })).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(requestedParams(fetchMock).get("q")).toBe("Die with a smile");
+    // The microphone was closed gracefully, not cut off.
+    expect(session.stop).toHaveBeenCalled();
+    expect(session.abort).not.toHaveBeenCalled();
+    expect(await mic()).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("stops listening when the browser reports an error but never signals the end", async () => {
-    vi.stubGlobal("webkitSpeechRecognition", FakeRecognition);
+  it("works again for a second and third search, reusing one recogniser", async () => {
+    useFake();
+    const fetchMock = mockApi({ body: success([track()]) });
+    const { user, input } = setup();
+
+    for (const phrase of ["die with a smile", "oorum blood", "shallow"]) {
+      await user.click(await mic());
+      act(() => FakeRecognition.last!.say(phrase, true));
+      expect(input).toHaveValue(phrase);
+      await waitFor(() => expect(requestedParams(fetchMock, fetchMock.mock.calls.length - 1).get("q")).toBe(phrase));
+    }
+    expect(FakeRecognition.created).toBe(1);
+    expect(FakeRecognition.last!.start).toHaveBeenCalledTimes(3);
+  });
+
+  it("waits for the previous session to close before starting the next one", async () => {
+    useFake();
+    FakeRecognition.confirmsEnd = false;
+    mockApi({ body: success([track()]) });
+    const { user } = setup();
+
+    await user.click(await mic());
+    const session = FakeRecognition.last!;
+    await user.click(screen.getByRole("button", { name: "Stop listening" }));
+    // Still closing: a new tap must not start a second session on top of it.
+    await user.click(await mic());
+    expect(session.start).toHaveBeenCalledTimes(1);
+
+    act(() => session.onend?.());
+    expect(session.start).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: "Stop listening" })).toBeInTheDocument();
+  });
+
+  it("recovers when the browser reports an error and never signals the end", async () => {
+    useFake();
+    FakeRecognition.confirmsEnd = false;
     mockApi({ body: success([]) });
     const { user } = setup();
-    await user.click(await screen.findByRole("button", { name: "Search by voice" }));
-    // Note: no onend call, which is what some browsers do.
-    act(() => FakeRecognition.last!.onerror?.({ error: "service-not-allowed" }));
+    await user.click(await mic());
+    const session = FakeRecognition.last!;
+    act(() => session.onerror?.({ error: "service-not-allowed" }));
 
     expect(await screen.findByText(/Voice search isn't available here/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Search by voice" })).toHaveAttribute("aria-pressed", "false");
+    expect(await mic()).toHaveAttribute("aria-pressed", "false");
     expect(screen.queryByText(/Listening/)).not.toBeInTheDocument();
+    // With no confirmation from the browser, the session is forced closed so the next tap works.
+    await waitFor(() => expect(session.abort).toHaveBeenCalled(), { timeout: 2500 });
+    await user.click(await mic());
+    expect(session.start).toHaveBeenCalledTimes(2);
   });
 
   it("stops listening when Search is pressed or the mic is tapped again", async () => {
-    vi.stubGlobal("webkitSpeechRecognition", FakeRecognition);
+    useFake();
     mockApi({ body: success([]) });
     const { user } = setup();
 
-    await user.click(await screen.findByRole("button", { name: "Search by voice" }));
-    const first = FakeRecognition.last!;
+    await user.click(await mic());
+    const session = FakeRecognition.last!;
     await user.click(screen.getByRole("button", { name: /^Search$/ }));
-    expect(first.abort).toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Search by voice" })).toBeInTheDocument();
+    expect(session.stop).toHaveBeenCalledTimes(1);
+    expect(await mic()).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Search by voice" }));
-    const second = FakeRecognition.last!;
+    await user.click(await mic());
     await user.click(screen.getByRole("button", { name: "Stop listening" }));
-    expect(second.abort).toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Search by voice" })).toBeInTheDocument();
+    expect(session.stop).toHaveBeenCalledTimes(2);
+    expect(await mic()).toBeInTheDocument();
   });
 
   it("explains a blocked microphone", async () => {
-    vi.stubGlobal("webkitSpeechRecognition", FakeRecognition);
+    useFake();
     mockApi({ body: success([]) });
     const { user } = setup();
-    await user.click(await screen.findByRole("button", { name: "Search by voice" }));
-    act(() => {
-      FakeRecognition.last!.onerror?.({ error: "not-allowed" });
-      FakeRecognition.last!.onend?.();
-    });
+    await user.click(await mic());
+    act(() => FakeRecognition.last!.onerror?.({ error: "not-allowed" }));
     expect(await screen.findByText(/Microphone access is blocked/)).toBeInTheDocument();
   });
 });

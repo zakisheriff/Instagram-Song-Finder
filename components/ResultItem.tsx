@@ -62,11 +62,11 @@ export function ResultItem({
           {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
           {playing ? "Pause preview" : "Play preview"}
         </button>
-        <p className="preview__caption" role={previewFailed ? "alert" : undefined}>
-          {previewFailed
-            ? "This preview couldn't be played. Search again to refresh it."
-            : `30-second preview from ${provider.name}`}
-        </p>
+        {previewFailed && (
+          <p className="preview__caption" role="alert">
+            This preview couldn&apos;t be played. Search again to refresh it.
+          </p>
+        )}
       </div>
     ) : null;
 
