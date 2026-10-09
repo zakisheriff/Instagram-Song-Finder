@@ -1,0 +1,94 @@
+import { describe, expect, it } from "vitest";
+import { DeezerProvider, mapDeezerTrack } from "@/lib/deezer/provider";
+import { DEEZER_API, fakeFetch, json, noSleep } from "./helpers/fake-fetch";
+
+const deezerTrack = (overrides: Record<string, unknown> = {}) => ({
+  id: 2947516331,
+  title: "Die With A Smile",
+  isrc: "USUM72409273",
+  link: "https://www.deezer.com/track/2947516331",
+  duration: 250,
+  explicit_lyrics: false,
+  artist: { name: "Lady Gaga" },
+  album: { title: "Die With A Smile", cover_medium: "https://cdn-images.dzcdn.net/images/cover/x/250x250.jpg" },
+  ...overrides,
+});
+
+const make = (routes: Parameters<typeof fakeFetch>[0]) => {
+  const fake = fakeFetch(routes);
+  return { ...fake, provider: new DeezerProvider({ fetchImpl: fake.fetchImpl, sleep: noSleep }) };
+};
+
+describe("mapDeezerTrack", () => {
+  it("maps catalog metadata", () => {
+    expect(mapDeezerTrack(deezerTrack())).toMatchObject({
+      id: "deezer:2947516331",
+      provider: "deezer",
+      title: "Die With A Smile",
+      artists: ["Lady Gaga"],
+      isrc: "USUM72409273",
+      durationMs: 250_000,
+      releaseDate: null,
+      url: "https://www.deezer.com/track/2947516331",
+    });
+  });
+
+  it("prefers the full contributor list and drops insecure artwork", () => {
+    const track = mapDeezerTrack(
+      deezerTrack({
+        contributors: [{ name: "Lady Gaga" }, { name: "Bruno Mars" }],
+        album: { title: "A", cover_medium: "http://insecure.example/a.jpg" },
+        release_date: "2024-08-16",
+      }),
+    );
+    expect(track?.artists).toEqual(["Lady Gaga", "Bruno Mars"]);
+    expect(track?.artworkUrl).toBeNull();
+    expect(track?.releaseDate).toBe("2024-08-16");
+  });
+
+  it("keeps a missing ISRC as null", () => {
+    expect(mapDeezerTrack(deezerTrack({ isrc: "" }))?.isrc).toBeNull();
+    expect(mapDeezerTrack(deezerTrack({ isrc: undefined }))?.isrc).toBeNull();
+  });
+});
+
+describe("DeezerProvider", () => {
+  it("searches with paging", async () => {
+    const { provider, calls } = make({
+      [`${DEEZER_API}/search/track`]: () =>
+        json({ data: [deezerTrack(), deezerTrack({ id: 2, title: "Second" })], total: 30, next: "x" }),
+    });
+    const page = await provider.searchTracks("die with a smile", { offset: 10 });
+    expect(page.tracks).toHaveLength(2);
+    expect(page.nextOffset).toBe(12);
+    expect(page.total).toBe(30);
+    const params = new URL(calls[0].url).searchParams;
+    expect(params.get("index")).toBe("10");
+    expect(params.get("limit")).toBe("10");
+  });
+
+  it("looks up a recording by ISRC and returns nothing when there is no data", async () => {
+    const { provider } = make({
+      [`${DEEZER_API}/track/isrc:USUM72409273`]: () => json(deezerTrack()),
+      [`${DEEZER_API}/track/isrc`]: () => json({ error: { type: "DataException", code: 800 } }),
+    });
+    expect(await provider.findByIsrc("USUM72409273")).toHaveLength(1);
+    expect(await provider.findByIsrc("GBAYE0601498")).toEqual([]);
+  });
+
+  it("maps quota errors to RATE_LIMITED and other errors to PROVIDER_UNAVAILABLE", async () => {
+    const quota = make({ [DEEZER_API]: () => json({ error: { type: "Exception", code: 4 } }) });
+    await expect(quota.provider.searchTracks("x y")).rejects.toMatchObject({ code: "RATE_LIMITED" });
+
+    const busy = make({ [DEEZER_API]: () => json({ error: { type: "Exception", code: 700 } }) });
+    await expect(busy.provider.searchTracks("x y")).rejects.toMatchObject({
+      code: "PROVIDER_UNAVAILABLE",
+    });
+  });
+
+  it("validates track ids before calling the API", async () => {
+    const { provider, calls } = make({});
+    expect(await provider.getTrack("../secret")).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+});
