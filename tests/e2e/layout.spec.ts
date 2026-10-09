@@ -85,6 +85,26 @@ test("on desktop the hero fills the first screen and the guide starts below it",
   expect(rule!.y).toBeGreaterThanOrEqual(viewportHeight);
 });
 
+test("on desktop the logo stays with the hero while the results scroll", async ({ page, mockSearch }) => {
+  test.skip(isPhoneLayout(page), "desktop layout only");
+  const many = Array.from({ length: 10 }, (_, index) => ({ ...TRACK, id: `spotify:track-${index}`, title: `Song ${index}` }));
+  await mockSearch(results(many));
+  await page.goto("/");
+  await searchBox(page).fill("song");
+  await expect(page.getByText("Song 9")).toBeVisible();
+
+  const logo = page.getByRole("link", { name: "Instagram Song Finder home" });
+  const illustration = page.locator(".collage");
+  const before = { logo: await logo.boundingBox(), art: await illustration.boundingBox() };
+  await page.mouse.wheel(0, 300);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+  const after = { logo: await logo.boundingBox(), art: await illustration.boundingBox() };
+
+  // Both stay pinned in the viewport instead of scrolling away.
+  expect(Math.round(after.logo!.y)).toBe(Math.round(before.logo!.y));
+  expect(Math.round(after.art!.y)).toBe(Math.round(before.art!.y));
+});
+
 test("on phones the landing fills the first screen and the guide starts below it", async ({
   page,
 }) => {
@@ -156,8 +176,8 @@ test("primary controls are comfortable tap targets and never overlap", async ({
   for (const control of [
     page.getByRole("button", { name: "Search", exact: true }),
     region.getByRole("button", { name: "Copy for Instagram" }),
+    region.getByRole("link", { name: "Copy and open Instagram" }),
     region.getByRole("link", { name: /Open in Spotify/ }),
-    region.getByRole("button", { name: "Copy ISRC only" }),
   ]) {
     const box = await control.boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(44);

@@ -39,10 +39,10 @@ export function SongFinder({ headline }: SongFinderProps) {
   return (
     <div className="split">
       <section className="hero" aria-labelledby="hero-headline">
-        <Link className="hero__logo" href="/" aria-label={`${site.name} home`}>
-          <SiteLogo size={60} priority />
-        </Link>
         <div className="hero__inner">
+          <Link className="hero__logo" href="/" aria-label={`${site.name} home`}>
+            <SiteLogo size={60} priority />
+          </Link>
           <p className="hero__wordmark">
             <SiteLockup />
           </p>
