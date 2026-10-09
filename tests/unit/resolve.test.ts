@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TtlCache } from "@/lib/cache/ttl-cache";
 import { MusicError } from "@/lib/music/errors";
 import { resolveQuery } from "@/lib/search/resolve";
+import { editDistance, relaxedQueries, tokenize, trackSimilarity } from "@/lib/search/similarity";
 import { page, stubProvider, track } from "./helpers/stub-provider";
 
 const ID = "2plbrEY59IikOBgBGLjaoe";
@@ -111,6 +112,69 @@ describe("resolveQuery: text", () => {
     await Promise.all([resolveQuery("Bad Guy", options), resolveQuery("bad guy", options)]);
     await resolveQuery("BAD GUY", options);
     expect(spotify.searchTracks).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("resolveQuery: typo tolerance", () => {
+  const junk = track({ id: "spotify:junk", title: "Smiling Faces", artists: ["Someone Else"], album: "Other" });
+
+  it("keeps the preferred catalog when its results match what was typed", async () => {
+    const spotify = stubProvider("spotify", { searchTracks: vi.fn(async () => page([track()])) });
+    const deezer = stubProvider("deezer", { searchTracks: vi.fn(async () => page([track({ provider: "deezer" })])) });
+    const result = await resolveQuery("die with a smile", { providers: [spotify, deezer], cache });
+    expect(result.provider.id).toBe("spotify");
+    expect(deezer.searchTracks).not.toHaveBeenCalled();
+  });
+
+  it("switches catalog when a misspelled query matches better elsewhere", async () => {
+    const spotify = stubProvider("spotify", { searchTracks: vi.fn(async () => page([junk])) });
+    const deezer = stubProvider("deezer", {
+      searchTracks: vi.fn(async () => page([track({ id: "deezer:1", provider: "deezer" })])),
+    });
+    const result = await resolveQuery("die wth a smlie ldy gaga", { providers: [spotify, deezer], cache });
+    expect(result.provider.id).toBe("deezer");
+    expect(result.tracks[0].title).toBe("Die With A Smile");
+    expect(result.approximate).toBeUndefined();
+  });
+
+  it("stays with the preferred catalog when the other is no better", async () => {
+    const spotify = stubProvider("spotify", { searchTracks: vi.fn(async () => page([junk])) });
+    const deezer = stubProvider("deezer", { searchTracks: vi.fn(async () => page([junk])) });
+    const result = await resolveQuery("completely different words", { providers: [spotify, deezer], cache });
+    expect(result.provider.id).toBe("spotify");
+  });
+
+  it("retries without one word when nothing matches, and says the result is approximate", async () => {
+    const searchTracks = vi.fn(async (query: string) =>
+      query === "die with a smile" ? page([track()]) : page([]),
+    );
+    const spotify = stubProvider("spotify", { searchTracks });
+    const result = await resolveQuery("die with a smile xqzv", { providers: [spotify], cache });
+    expect(result).toMatchObject({ approximate: true, query: "die with a smile" });
+    expect(result.tracks).toHaveLength(1);
+  });
+});
+
+describe("similarity helpers", () => {
+  it("scores typos highly and unrelated text low", () => {
+    expect(trackSimilarity("die wth a smlie", track())).toBeGreaterThan(0.75);
+    expect(trackSimilarity("ldy gaga bruno mrs", track())).toBeGreaterThan(0.75);
+    expect(trackSimilarity("die wi", track())).toBeGreaterThan(0.6);
+    expect(trackSimilarity("Béyoncé hälo", track({ title: "Halo", artists: ["Beyonce"] }))).toBe(1);
+    expect(trackSimilarity("thunderstruck acdc", track())).toBeLessThan(0.5);
+  });
+
+  it("computes edit distance and tokens", () => {
+    expect(editDistance("smlie", "smile")).toBe(2);
+    expect(editDistance("", "abc")).toBe(3);
+    expect(tokenize("  Don't Stop (Me) Now! ")).toEqual(["don", "t", "stop", "me", "now"]);
+  });
+
+  it("builds looser queries by leaving out one word at a time", () => {
+    expect(relaxedQueries("one")).toEqual([]);
+    const variants = relaxedQueries("die with a smile xqzv");
+    expect(variants).toContain("die with a smile");
+    expect(variants.length).toBeLessThanOrEqual(4);
   });
 });
 

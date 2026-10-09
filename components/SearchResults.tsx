@@ -85,8 +85,10 @@ export function SearchResults({ search, selectedId, onSelect }: SearchResultsPro
         <>
           <div className="results__status">
             <span>
-              {result.kind === "text"
-                ? "Select the correct recording"
+              {result.approximate
+                ? "No exact match. Showing the closest results"
+                : result.kind === "text"
+                  ? "Select the correct recording"
                 : result.kind === "isrc"
                   ? `Recordings with ISRC ${result.query}`
                   : "Exact match for your Spotify link"}

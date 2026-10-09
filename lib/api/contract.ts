@@ -11,6 +11,8 @@ export interface SearchSuccess {
   tracks: Track[];
   nextOffset: number | null;
   total: number | null;
+  /** True when nothing matched as typed and the closest results are shown instead. */
+  approximate?: boolean;
 }
 
 export interface ApiFailure {

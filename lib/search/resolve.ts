@@ -9,6 +9,7 @@ import type {
 } from "@/lib/music/types";
 import { resolveSpotifyShortLink } from "@/lib/spotify/short-link";
 import { detectInput, MIN_TEXT_QUERY_LENGTH } from "./detect";
+import { pageSimilarity, relaxedQueries } from "./similarity";
 
 export type ResolvedKind = "text" | "isrc" | "spotify-track";
 
@@ -20,6 +21,8 @@ export interface ResolveResult {
   tracks: Track[];
   nextOffset: number | null;
   total: number | null;
+  /** True when nothing matched the query as typed and a looser search was used. */
+  approximate?: boolean;
 }
 
 export interface ResolveOptions {
@@ -34,6 +37,11 @@ export interface ResolveOptions {
 const SEARCH_TTL_MS = 5 * 60_000;
 const TRACK_TTL_MS = 10 * 60_000;
 const SHORT_LINK_TTL_MS = 10 * 60_000;
+
+/** A page whose best result matches the query this well needs no second opinion. */
+const CONFIDENT_MATCH = 0.9;
+/** Another catalog must beat the preferred one by this much to replace it. */
+const SWITCH_MARGIN = 0.05;
 
 const sharedCache = new TtlCache<unknown>({ maxEntries: 1000 });
 
@@ -98,18 +106,75 @@ export async function resolveQuery(raw: string, options: ResolveOptions): Promis
           publicMessage: `Type at least ${MIN_TEXT_QUERY_LENGTH} characters to search.`,
         });
       }
-      const { provider, value } = await firstSuccessful(
-        candidates,
-        (provider) =>
-          cache.getOrLoad(
-            `search:${provider.info.id}:${offset}:${detected.query.toLowerCase()}`,
-            SEARCH_TTL_MS,
-            () => provider.searchTracks(detected.query, { offset }),
-          ) as Promise<SearchPage>,
-        // Only the first page may fall through to another provider.
-        (page) => offset === 0 && page.tracks.length === 0,
-      );
-      return { kind: "text", query: detected.query, provider: provider.info, ...value };
+      const search = (provider: MusicProvider, query: string) =>
+        cache.getOrLoad(`search:${provider.info.id}:${offset}:${query.toLowerCase()}`, SEARCH_TTL_MS, () =>
+          provider.searchTracks(query, { offset }),
+        ) as Promise<SearchPage>;
+
+      // Later pages stay with the provider that served the first one.
+      if (offset > 0 || options.provider) {
+        const { provider, value } = await firstSuccessful(
+          candidates,
+          (provider) => search(provider, detected.query),
+          () => false,
+        );
+        return { kind: "text", query: detected.query, provider: provider.info, ...value };
+      }
+
+      const available = candidates.filter((provider) => provider.isConfigured());
+      let best: { provider: MusicProvider; page: SearchPage; score: number } | undefined;
+      let empty: { provider: MusicProvider; page: SearchPage } | undefined;
+      let failure: MusicError | undefined;
+
+      // Typo tolerance: when the preferred catalog's results don't really match
+      // what was typed, ask the next one and keep whichever matches better.
+      for (const provider of available) {
+        let page: SearchPage;
+        try {
+          page = await search(provider, detected.query);
+        } catch (error) {
+          if (!isMusicError(error) || !error.allowsFallback) throw error;
+          failure ??= error;
+          continue;
+        }
+        if (page.tracks.length === 0) {
+          empty ??= { provider, page };
+          continue;
+        }
+        const score = pageSimilarity(detected.query, page.tracks);
+        if (!best || score > best.score + SWITCH_MARGIN) best = { provider, page, score };
+        if (best.score >= CONFIDENT_MATCH) break;
+      }
+
+      if (best) {
+        return { kind: "text", query: detected.query, provider: best.provider.info, ...best.page };
+      }
+
+      // Nothing anywhere: retry with one word left out at a time.
+      for (const variant of relaxedQueries(detected.query)) {
+        for (const provider of available) {
+          try {
+            const page = await search(provider, variant);
+            if (page.tracks.length > 0) {
+              return {
+                kind: "text",
+                query: variant,
+                provider: provider.info,
+                approximate: true,
+                ...page,
+              };
+            }
+          } catch (error) {
+            if (!isMusicError(error) || !error.allowsFallback) throw error;
+            failure ??= error;
+          }
+        }
+      }
+
+      if (empty) {
+        return { kind: "text", query: detected.query, provider: empty.provider.info, ...empty.page };
+      }
+      throw failure ?? new MusicError("NOT_CONFIGURED", "No music provider is configured");
     }
 
     case "isrc": {
