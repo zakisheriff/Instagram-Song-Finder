@@ -5,7 +5,7 @@
 - Website: https://instagramsongfinder.theatom.lk/
 - Publisher: The Atom (https://www.theatom.lk)
 - Price: free, no account or sign-in required
-- Input accepted: song title, artist name, keywords, Spotify track link, Spotify share link, Spotify URI (`spotify:track:...`), or an ISRC with or without the `isrc:` prefix
+- Input accepted: song title, artist name, keywords, an ISRC with or without the `isrc:` prefix, or a song link from Spotify (including share links and `spotify:track:` URIs), Apple Music, YouTube, YouTube Music, Deezer or SoundCloud
 - Output: matching recordings with title, artist, album, artwork, release date, length and ISRC, plus a one-click copy of `isrc:<CODE>`
 - Data source: the official Spotify Web API where that integration is available; otherwise Deezer's public catalog. Every result is labelled with its source. Codes are never generated or guessed.
 

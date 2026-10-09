@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { faqEntries } from "@/lib/content/faq";
+import { FeedbackLinks } from "./FeedbackLinks";
 import { ChevronIcon } from "./icons";
 
 /**
@@ -60,6 +61,15 @@ export function FaqSection() {
             </article>
           );
         })}
+      </div>
+
+      <div className="callout faq__more">
+        <strong>Didn&apos;t find your answer?</strong>
+        <p>
+          Tell us what went wrong or which song you couldn&apos;t find, and we&apos;ll look into
+          it.
+        </p>
+        <FeedbackLinks />
       </div>
     </section>
   );

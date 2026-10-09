@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { facts } from "@/lib/content/links";
 import { site } from "@/lib/site";
 
 export function AboutSection() {
@@ -12,8 +13,18 @@ export function AboutSection() {
         <a href={site.publisher.url} target="_blank" rel="noopener">
           {site.publisher.name}
         </a>
-        . It needs no account and no sign-in.
+        . It needs no account and no sign-in, and it accepts song links from Spotify, Apple Music,
+        YouTube, YouTube Music, Deezer and SoundCloud.
       </p>
+      <ul className="cards cards--facts">
+        {facts.map((fact) => (
+          <li className="card" key={fact.title}>
+            <h3>{fact.title}</h3>
+            <p>{fact.detail}</p>
+          </li>
+        ))}
+      </ul>
+
       <p>
         Song titles, artists, album artwork and ISRC codes come from Spotify&apos;s catalog where
         that integration is available. When it is not, results may come from Deezer&apos;s public

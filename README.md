@@ -40,7 +40,7 @@
 Instagram Song Finder's mission is to be:
 
 - **A free, no-login tool** — search, pick the recording, copy the code
-- **One search box for everything** — titles, artists, keywords, Spotify links, Spotify URIs and ISRCs
+- **One search box for everything** — titles, artists, keywords, ISRCs, and song links from Spotify, Apple Music, YouTube, YouTube Music, Deezer and SoundCloud
 - **Honest about its data** — real catalog metadata only, and no promises about what Instagram carries
 
 ---
@@ -73,7 +73,10 @@ An ISRC identifies **one specific recording**, so searching by code is a precise
 ## 🔎 Universal Search
 
 - **Automatic Input Detection**  
-  One box works out whether it was given text, a Spotify link, a share link, a URI or an ISRC.
+  One box works out whether it was given text, an ISRC, or a link from a music service.
+
+- **Paste a Link From Your Music App**  
+  Spotify and Deezer links return the exact recording. Apple Music links are matched by title, artist and length. YouTube, YouTube Music and SoundCloud links become a title search you confirm. Tidal and Amazon Music are not supported, because they don't share a song's details publicly.
 
 - **Typo Tolerance**  
   Misspelled queries still find the song; when nothing matches, the closest results are shown and labelled.
@@ -236,7 +239,7 @@ npm run test:e2e
 
 ### For Visitors
 
-✅ **Universal Search** — Title, artist, keywords, Spotify link, share link, URI or ISRC  
+✅ **Universal Search** — Title, artist, keywords, ISRC, or a link from Spotify, Apple Music, YouTube, Deezer or SoundCloud  
 ✅ **Search As You Type** — Debounced, cancellable, with loading and error states  
 ✅ **Typo Tolerance** — Misspellings still find the right song  
 ✅ **One-Click Copy** — Copies the full `isrc:CODE` string  
@@ -290,7 +293,7 @@ The built-in rate limiter keeps its counters in server memory, so on serverless 
 
 ### Endpoints
 - `GET /api/search?q=<anything>&offset=<n>&provider=<spotify|deezer>` — Universal search
-- `GET /api/track?url=<spotify link, share link or URI>` — Exact recording
+- `GET /api/track?url=<song link from a supported service>` — Recording for that link
 - `GET /api/track?isrc=<code>` — Recordings with that ISRC
 
 ### Success

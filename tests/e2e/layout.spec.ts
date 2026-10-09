@@ -171,10 +171,10 @@ test("the top-right pill links to GitHub, then becomes Try now past the hero", a
 
 test("bug reports and missing-song reports open an email to The Atom", async ({ page }) => {
   await page.goto("/");
-  const bug = page.getByRole("link", { name: "Report a bug" }).filter({ visible: true });
-  const feature = page.getByRole("link", { name: "Missing a song? Tell us" }).filter({ visible: true });
-  await expect(bug).toHaveCount(1);
-  await expect(feature).toHaveCount(1);
+  // Shown on the first screen and again under the FAQ.
+  const bug = page.getByRole("link", { name: "Report a bug" }).filter({ visible: true }).first();
+  const feature = page.getByRole("link", { name: "Missing a song? Tell us" }).filter({ visible: true }).first();
+  await expect(page.getByRole("link", { name: "Report a bug" }).filter({ visible: true })).toHaveCount(2);
   await expect(bug).toHaveAttribute("href", /^mailto:info@theatom\.lk\?subject=Bug%20report/);
   await expect(feature).toHaveAttribute("href", /^mailto:info@theatom\.lk\?subject=Missing%20song/);
 });
@@ -183,7 +183,7 @@ test("every home page section is at least one screen tall", async ({ page }) => 
   await page.goto("/");
   const viewportHeight = page.viewportSize()!.height;
   const tabBar = isPhoneLayout(page) ? 45 : 0;
-  for (const id of ["how-it-works", "faq", "about"]) {
+  for (const id of ["how-it-works", "supported-links", "faq", "about"]) {
     const box = await page.locator(`#${id}`).boundingBox();
     expect(Math.ceil(box!.height), id).toBeGreaterThanOrEqual(viewportHeight - tabBar);
   }

@@ -30,8 +30,8 @@ export default function AboutPage() {
 
       <h2>What it does</h2>
       <p>
-        You can search with a song title, an artist name, keywords, a Spotify track link, a Spotify
-        URI or an ISRC. The tool returns the matching recordings with their artwork, artist, album
+        You can search with a song title, an artist name, keywords or an ISRC, or paste a song link
+        from Spotify, Apple Music, YouTube, YouTube Music, Deezer or SoundCloud. The tool returns the matching recordings with their artwork, artist, album
         and ISRC, and copies the code in the form <code>isrc:XXXXXXXXXXXX</code> so it can be
         pasted into Instagram&apos;s music search.
       </p>
@@ -53,8 +53,13 @@ export default function AboutPage() {
         </li>
         <li>
           <strong>Deezer.</strong> If Spotify is not available, text and ISRC searches may be
-          answered from Deezer&apos;s public catalog instead. Spotify links can only be looked up
-          through Spotify.
+          answered from Deezer&apos;s public catalog instead.
+        </li>
+        <li>
+          <strong>Links from other services.</strong> A pasted link is only used to identify the
+          song: Apple&apos;s public lookup gives its title, artist and length, and YouTube and
+          SoundCloud give its title. The recording and its ISRC are then found in the catalogs
+          above, and you confirm the match.
         </li>
       </ul>
       <p>

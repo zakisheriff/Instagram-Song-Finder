@@ -3,6 +3,7 @@ import { AboutSection } from "@/components/AboutSection";
 import { FaqSection } from "@/components/FaqSection";
 import { HowToSection } from "@/components/HowToSection";
 import { JsonLd } from "@/components/JsonLd";
+import { LinksSection } from "@/components/LinksSection";
 import { MobileTabBar } from "@/components/MobileTabBar";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SongFinder } from "@/components/SongFinder";
@@ -36,6 +37,8 @@ export default function HomePage() {
         />
         <hr className="rule" />
         <HowToSection />
+        <hr className="rule" />
+        <LinksSection />
         <hr className="rule" />
         <FaqSection />
         <hr className="rule" />

@@ -11,7 +11,7 @@ export const faqEntries: FaqEntry[] = [
     id: "what-is-instagram-song-finder",
     question: "What is Instagram Song Finder?",
     answer: [
-      "Instagram Song Finder is a free web tool by The Atom that looks up the ISRC code of a song and formats it for Instagram's music search. You search by song title, artist, Spotify link or an existing ISRC, pick the right recording, and copy a ready-to-paste string such as isrc:USUM72409273.",
+      "Instagram Song Finder is a free web tool by The Atom that looks up the ISRC code of a song and formats it for Instagram's music search. You search by song title, artist, a link from your music app or an existing ISRC, pick the right recording, and copy a ready-to-paste string such as isrc:USUM72409273.",
       "It is an independent tool. It is not made by, affiliated with or endorsed by Instagram, Meta or Spotify.",
     ],
   },
@@ -35,8 +35,9 @@ export const faqEntries: FaqEntry[] = [
     id: "can-i-search-using-a-spotify-song-link",
     question: "Can I search using a Spotify song link?",
     answer: [
-      "Yes. Paste a full open.spotify.com track link, a spotify.link share link or a spotify:track: URI into the same search box. Tracking parameters such as ?si= are ignored, and the lookup returns that exact recording rather than a list of similar songs.",
-      "Links to albums, playlists, artists and podcasts are not supported, because an ISRC belongs to a single recording.",
+      "Yes. Paste a song link from Spotify, Apple Music, YouTube, YouTube Music, Deezer or SoundCloud into the same search box, and the tool works out which service it came from. Tracking parameters such as ?si= are ignored.",
+      "Spotify and Deezer links return that exact recording. Apple Music links are matched by title, artist and length. YouTube, YouTube Music and SoundCloud only reveal a title, so those links show the matching recordings for you to choose from.",
+      "Links to albums, playlists, artists and podcasts are not supported, because an ISRC belongs to a single recording. Tidal and Amazon Music links are not supported either, since those services don't share a song's details publicly.",
     ],
   },
   {
@@ -83,7 +84,7 @@ export const faqEntries: FaqEntry[] = [
     question: "How do I find the exact version of a song?",
     answer: [
       "Compare the details shown with each result: artist, album, release year, length and labels such as Live, Remastered, Remix or Sped up. Each recording is listed separately with its own ISRC and results are never merged, so you can pick the one that matches what you want.",
-      "The most reliable method is to open the exact track in Spotify, copy its link and paste it here, which returns that recording and no other.",
+      "The most reliable method is to open the exact track in Spotify or Deezer, copy its link and paste it here, which returns that recording and no other.",
     ],
   },
 ];
