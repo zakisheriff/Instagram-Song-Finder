@@ -173,8 +173,9 @@ describe("similarity helpers", () => {
   it("builds looser queries by leaving out one word at a time", () => {
     expect(relaxedQueries("one")).toEqual([]);
     const variants = relaxedQueries("die with a smile xqzv");
-    expect(variants).toContain("die with a smile");
-    expect(variants.length).toBeLessThanOrEqual(4);
+    expect(variants[0]).toBe("die with a smile");
+    expect(variants).toContain("with a smile xqzv");
+    expect(relaxedQueries("a b c d e f g h").length).toBe(6);
   });
 });
 

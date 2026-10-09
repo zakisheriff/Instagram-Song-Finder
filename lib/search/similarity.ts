@@ -65,19 +65,20 @@ export function pageSimilarity(query: string, tracks: Track[]): number {
 }
 
 /** Most variants tried when a query finds nothing at all. */
-const MAX_VARIANTS = 4;
+const MAX_VARIANTS = 6;
 
 /**
  * Looser versions of a query for when it finds nothing: each one leaves out a
- * single word, longest words kept first, so one unrecognisable word doesn't
- * sink the whole search.
+ * single word, so one unrecognisable word doesn't sink the whole search. The
+ * last word is dropped first, since stray extra words are usually added at the end.
  */
 export function relaxedQueries(query: string): string[] {
   const words = query.split(" ").filter(Boolean);
   if (words.length < 2) return [];
-  const variants = words.map((_, skipped) => words.filter((__, index) => index !== skipped).join(" "));
+  const variants = words
+    .map((_, skipped) => words.filter((__, index) => index !== skipped).join(" "))
+    .reverse();
   return [...new Set(variants)]
     .filter((variant) => variant.length >= 2 && variant !== query)
-    .sort((a, b) => b.length - a.length)
     .slice(0, MAX_VARIANTS);
 }
