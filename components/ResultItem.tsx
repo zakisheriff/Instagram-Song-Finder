@@ -58,6 +58,7 @@ export function ResultItem({
         className="result__row"
         aria-expanded={selected}
         aria-controls={`${domId}-detail`}
+        // Selecting only ever opens a recording; the open one stays open.
         onClick={onSelect}
       >
         <span className="result__art">

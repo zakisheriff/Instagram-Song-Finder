@@ -675,7 +675,9 @@ select {
   transition: transform 0.2s var(--ease-field);
 }
 
+/* The open recording can't be collapsed, so it shows no arrow at all. */
 .result.is-selected .result__chevron {
+  opacity: 0;
   transform: rotate(180deg);
 }
 
