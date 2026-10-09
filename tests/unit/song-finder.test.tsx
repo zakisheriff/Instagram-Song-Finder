@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ImgHTMLAttributes, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -286,6 +286,65 @@ describe("SongFinder", () => {
     expect(input).toHaveValue("");
     expect(screen.queryByRole("region", { name: "Search results" })).not.toBeInTheDocument();
     expect(input).toHaveFocus();
+  });
+});
+
+describe("voice search", () => {
+  class FakeRecognition {
+    static last: FakeRecognition | null = null;
+    lang = "";
+    continuous = true;
+    interimResults = false;
+    maxAlternatives = 0;
+    onresult: ((event: { results: Array<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null = null;
+    onerror: ((event: { error: string }) => void) | null = null;
+    onend: (() => void) | null = null;
+    start = vi.fn();
+    abort = vi.fn();
+    stop = vi.fn(() => this.onend?.());
+    constructor() {
+      FakeRecognition.last = this;
+    }
+  }
+
+  it("hides the microphone where the browser has no speech recognition", async () => {
+    mockApi({ body: success([]) });
+    setup();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole("button", { name: "Search by voice" })).not.toBeInTheDocument();
+  });
+
+  it("searches for what was said", async () => {
+    vi.stubGlobal("webkitSpeechRecognition", FakeRecognition);
+    const fetchMock = mockApi({ body: success([track()]) });
+    const { user, input } = setup();
+
+    await user.click(await screen.findByRole("button", { name: "Search by voice" }));
+    const session = FakeRecognition.last!;
+    expect(session.start).toHaveBeenCalled();
+    expect(session.interimResults).toBe(true);
+    expect(screen.getByRole("button", { name: "Stop listening" })).toHaveAttribute("aria-pressed", "true");
+
+    act(() => {
+      session.onresult?.({ results: [{ isFinal: true, 0: { transcript: "die with a smile" } }] });
+      session.onend?.();
+    });
+    expect(input).toHaveValue("die with a smile");
+    await screen.findByRole("region", { name: "Search results" });
+    expect(requestedParams(fetchMock).get("q")).toBe("die with a smile");
+    expect(screen.getByRole("button", { name: "Search by voice" })).toBeInTheDocument();
+  });
+
+  it("explains a blocked microphone", async () => {
+    vi.stubGlobal("webkitSpeechRecognition", FakeRecognition);
+    mockApi({ body: success([]) });
+    const { user } = setup();
+    await user.click(await screen.findByRole("button", { name: "Search by voice" }));
+    act(() => {
+      FakeRecognition.last!.onerror?.({ error: "not-allowed" });
+      FakeRecognition.last!.onend?.();
+    });
+    expect(await screen.findByText(/Microphone access is blocked/)).toBeInTheDocument();
   });
 });
 

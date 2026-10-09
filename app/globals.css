@@ -399,6 +399,27 @@ select {
   color: var(--color-text);
 }
 
+/* Room for the microphone, so the floating label never runs underneath it. */
+.field--voice .field__label {
+  right: 52px;
+}
+
+.field__action--mic.is-listening {
+  background: var(--color-blue);
+  color: #fff;
+  animation: mic-pulse 1.4s ease-out infinite;
+}
+
+@keyframes mic-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 100, 224, 0.45);
+  }
+
+  100% {
+    box-shadow: 0 0 0 12px rgba(0, 100, 224, 0);
+  }
+}
+
 .search__message {
   min-height: 0;
   margin-top: 8px;
@@ -1421,6 +1442,12 @@ select {
 
   .search {
     margin: 32px 40px 0;
+  }
+
+  /* Keeps the full label readable next to the microphone on narrow phones. */
+  .field--voice .field__label {
+    font-size: 14px;
+    right: 48px;
   }
 
   .search__submit {

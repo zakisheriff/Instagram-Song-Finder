@@ -95,6 +95,13 @@ export const NoteIcon = (props: IconProps) => (
   </svg>
 );
 
+export const MicIcon = (props: IconProps) => (
+  <svg {...base(props)}>
+    <rect x="9" y="2.5" width="6" height="12" rx="3" />
+    <path d="M5 11a7 7 0 0 0 14 0M12 18v3.5" />
+  </svg>
+);
+
 export const ChevronIcon = (props: IconProps) => (
   <svg {...base(props)}>
     <path d="m6 9 6 6 6-6" />

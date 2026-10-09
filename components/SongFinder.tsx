@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { useSongSearch } from "@/hooks/useSongSearch";
+import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import { SEARCH_INPUT_ID } from "@/lib/search/constants";
 import { MAX_QUERY_LENGTH } from "@/lib/search/detect";
 import { site } from "@/lib/site";
 import { FeedbackLinks } from "./FeedbackLinks";
 import { HeroCollage } from "./HeroCollage";
-import { CloseIcon } from "./icons";
+import { CloseIcon, MicIcon } from "./icons";
 import { SearchResults } from "./SearchResults";
 import { SiteLockup } from "./SiteLockup";
 import { SiteLogo } from "./SiteLogo";
@@ -25,6 +26,7 @@ interface SongFinderProps {
  */
 export function SongFinder({ headline }: SongFinderProps) {
   const search = useSongSearch();
+  const voice = useVoiceSearch(search.setQuery);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const messageId = useId();
 
@@ -61,7 +63,9 @@ export function SongFinder({ headline }: SongFinderProps) {
         </h2>
 
         <form className="search" role="search" onSubmit={handleSubmit} noValidate>
-          <div className={`field${search.inputError ? " field--error" : ""}`}>
+          <div
+            className={`field${search.inputError ? " field--error" : ""}${voice.supported ? " field--voice" : ""}`}
+          >
             <input
               id={SEARCH_INPUT_ID}
               className="field__input"
@@ -81,14 +85,15 @@ export function SongFinder({ headline }: SongFinderProps) {
               aria-describedby={messageId}
             />
             <label className="field__label" htmlFor={SEARCH_INPUT_ID}>
-              Song name, artist, music link or ISRC
+              {voice.listening ? "Listening… say the song name" : "Song name, artist, music link or ISRC"}
             </label>
             {search.status === "loading" ? (
               <span className="field__action" aria-hidden="true">
                 <span className="spinner" />
               </span>
             ) : (
-              search.query.length > 0 && (
+              search.query.length > 0 &&
+              !voice.listening && (
                 <button
                   type="button"
                   className="field__action"
@@ -102,10 +107,21 @@ export function SongFinder({ headline }: SongFinderProps) {
                 </button>
               )
             )}
+            {voice.supported && (
+              <button
+                type="button"
+                className={`field__action field__action--mic${voice.listening ? " is-listening" : ""}`}
+                aria-label={voice.listening ? "Stop listening" : "Search by voice"}
+                aria-pressed={voice.listening}
+                onClick={voice.toggle}
+              >
+                <MicIcon size={18} />
+              </button>
+            )}
           </div>
 
           <p className="search__message" id={messageId} role="alert">
-            {search.inputError}
+            {search.inputError ?? voice.error}
           </p>
 
           <button

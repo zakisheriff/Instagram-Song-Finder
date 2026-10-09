@@ -31,7 +31,7 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), browsing-topics=(), clipboard-write=(self)",
+    value: "camera=(), microphone=(self), geolocation=(), browsing-topics=(), clipboard-write=(self)",
   },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   // The policy is production-only because the dev server relies on eval for hot reloading.
