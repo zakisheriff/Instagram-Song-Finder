@@ -81,7 +81,7 @@ export function SongFinder({ headline }: SongFinderProps) {
               aria-describedby={messageId}
             />
             <label className="field__label" htmlFor={SEARCH_INPUT_ID}>
-              Song, artist, music link or ISRC
+              Song name, artist, music link or ISRC
             </label>
             {search.status === "loading" ? (
               <span className="field__action" aria-hidden="true">

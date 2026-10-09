@@ -108,7 +108,7 @@ export async function resolveQuery(raw: string, options: ResolveOptions): Promis
   switch (detected.kind) {
     case "empty":
       throw new MusicError("INVALID_INPUT", "Empty query", {
-        publicMessage: "Enter a song, artist, music link or ISRC to search.",
+        publicMessage: "Enter a song name, artist, music link or ISRC to search.",
       });
 
     case "invalid":

@@ -111,7 +111,7 @@ export function handleSearch(request: Request, deps: HandlerDeps): Promise<Respo
   return run(request, deps, async (params) => {
     const parsed = searchSchema.safeParse(Object.fromEntries(params));
     if (!parsed.success) {
-      throw invalid("Enter a song, artist, music link or ISRC to search.");
+      throw invalid("Enter a song name, artist, music link or ISRC to search.");
     }
     return resolveQuery(parsed.data.q, {
       providers: deps.getProviders(),

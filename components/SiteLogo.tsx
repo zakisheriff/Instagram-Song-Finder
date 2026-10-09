@@ -1,4 +1,7 @@
 import Image from "next/image";
+// Imported rather than referenced by path so its URL is fingerprinted: when
+// the logo file changes, browsers and the image optimiser fetch the new one.
+import logo from "@/public/logo.png";
 
 interface SiteLogoProps {
   /** Rendered width and height in CSS pixels. */
@@ -16,7 +19,7 @@ export function SiteLogo({ size, priority = false, className }: SiteLogoProps) {
   return (
     <Image
       className={className}
-      src="/logo.png"
+      src={logo}
       alt=""
       width={size}
       height={size}
