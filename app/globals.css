@@ -1069,8 +1069,6 @@ select {
 .feedback a {
   display: inline-block;
   padding: 6px 0;
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 
 .feedback a:hover {

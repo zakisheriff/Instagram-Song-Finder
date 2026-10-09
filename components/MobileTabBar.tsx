@@ -98,6 +98,21 @@ export function MobileTabBar({ searchInputId }: MobileTabBarProps) {
           </Link>
         </li>
         <li>
+          <Link href="/#how-it-works" aria-label="How it works" aria-current={current("how-it-works")}>
+            <StepsIcon active={active === "how-it-works"} />
+          </Link>
+        </li>
+        <li>
+          <Link href="/#faq" aria-label="Frequently asked questions" aria-current={current("faq")}>
+            <QuestionIcon active={active === "faq"} />
+          </Link>
+        </li>
+        <li>
+          <Link href="/about" aria-label="About" aria-current={active === "about" ? "page" : undefined}>
+            <InfoIcon active={active === "about"} />
+          </Link>
+        </li>
+        <li>
           {onHome ? (
             <button
               type="button"
@@ -112,21 +127,6 @@ export function MobileTabBar({ searchInputId }: MobileTabBarProps) {
               <SearchIcon />
             </Link>
           )}
-        </li>
-        <li>
-          <Link href="/#how-it-works" aria-label="How it works" aria-current={current("how-it-works")}>
-            <StepsIcon active={active === "how-it-works"} />
-          </Link>
-        </li>
-        <li>
-          <Link href="/#faq" aria-label="Frequently asked questions" aria-current={current("faq")}>
-            <QuestionIcon active={active === "faq"} />
-          </Link>
-        </li>
-        <li>
-          <Link href="/about" aria-label="About" aria-current={active === "about" ? "page" : undefined}>
-            <InfoIcon active={active === "about"} />
-          </Link>
         </li>
       </ul>
     </nav>
