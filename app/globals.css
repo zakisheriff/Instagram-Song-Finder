@@ -1423,8 +1423,13 @@ select {
   .split {
     flex-direction: column;
     justify-content: flex-start;
-    min-height: calc(100vh - var(--tabbar-height) - env(safe-area-inset-bottom, 0px));
-    min-height: calc(100svh - var(--tabbar-height) - env(safe-area-inset-bottom, 0px));
+    /*
+     * Safari already keeps the visible tab-bar row above its bottom chrome.
+     * Subtracting the safe-area inset here a second time exposes the start of
+     * the guide between the landing divider and the fixed navigation.
+     */
+    min-height: calc(100vh - var(--tabbar-height));
+    min-height: calc(100svh - var(--tabbar-height));
   }
 
   .split__divider,

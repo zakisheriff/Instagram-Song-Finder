@@ -128,12 +128,14 @@ test("on phones the landing fills the first screen and the guide starts below it
   const viewportHeight = page.viewportSize()!.height;
   const tabBar = await page.getByRole("navigation", { name: "Sections" }).boundingBox();
   const byline = await page.locator(".panel__byline").boundingBox();
+  const landingDivider = await page.locator("main > .rule").first().boundingBox();
   const guide = await page.getByRole("heading", { name: "How to use an ISRC code on Instagram" }).boundingBox();
 
   // "from The Atom" sits at the bottom of the first screen, just above the tab bar.
   expect(byline!.y + byline!.height).toBeLessThanOrEqual(tabBar!.y);
   expect(byline!.y).toBeGreaterThan(viewportHeight * 0.75);
-  // Nothing from the next section is visible until the visitor scrolls.
+  // The landing reaches the navigation, so nothing from the next section can peek above it.
+  expect(Math.round(landingDivider!.y)).toBeGreaterThanOrEqual(Math.round(tabBar!.y) - 1);
   expect(guide!.y).toBeGreaterThanOrEqual(tabBar!.y);
 });
 
