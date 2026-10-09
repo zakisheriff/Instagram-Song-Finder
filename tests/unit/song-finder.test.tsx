@@ -5,6 +5,7 @@ import type { ImgHTMLAttributes, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SongFinder } from "@/components/SongFinder";
 import type { SearchApiResponse, SearchSuccess } from "@/lib/api/contract";
+import { speechLanguages } from "@/hooks/useVoiceSearch";
 import { copyText } from "@/lib/clipboard";
 import type { Track } from "@/lib/music/types";
 import { track } from "./helpers/stub-provider";
@@ -443,22 +444,63 @@ describe("voice search", () => {
     expect(FakeRecognition.last!.start).toHaveBeenCalledTimes(3);
   });
 
-  it("waits for the previous session to close before starting the next one", async () => {
+  it("starts immediately when tapped while the previous session is still closing", async () => {
     useFake();
     FakeRecognition.confirmsEnd = false;
     mockApi({ body: success([track()]) });
     const { user } = setup();
 
     await user.click(await mic());
-    const session = FakeRecognition.last!;
+    const first = FakeRecognition.last!;
     await user.click(screen.getByRole("button", { name: "Stop listening" }));
-    // Still closing: a new tap must not start a second session on top of it.
+    // The old session never confirmed it ended; a new tap must still open the microphone at once.
     await user.click(await mic());
-    expect(session.start).toHaveBeenCalledTimes(1);
-
-    act(() => session.onend?.());
-    expect(session.start).toHaveBeenCalledTimes(2);
+    const second = FakeRecognition.last!;
+    expect(second).not.toBe(first);
+    expect(first.abort).toHaveBeenCalled();
+    expect(second.start).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "Stop listening" })).toBeInTheDocument();
+  });
+
+  it("uses a language the device supports and falls back without showing an error", async () => {
+    useFake();
+    vi.stubGlobal("navigator", { ...navigator, language: "en-LK", clipboard: navigator.clipboard });
+    const fetchMock = mockApi({ body: success([track()]) });
+    const { user, input } = setup();
+
+    await user.click(await mic());
+    const first = FakeRecognition.last!;
+    // en-LK has no recogniser on Apple devices; the closest common English is tried first.
+    expect(first.lang).toBe("en-IN");
+
+    // The device refuses that one too: the next language is tried straight away.
+    act(() => first.onerror?.({ error: "service-not-allowed" }));
+    const second = FakeRecognition.last!;
+    expect(second).not.toBe(first);
+    expect(second.lang).toBe("en-US");
+    expect(second.start).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/Voice search isn't available/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Stop listening" })).toBeInTheDocument();
+
+    act(() => second.say("oorum blood", true));
+    expect(input).toHaveValue("oorum blood");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    // The language that worked is remembered for the next tap.
+    await user.click(await mic());
+    expect(FakeRecognition.last!.lang).toBe("en-US");
+  });
+
+  it("shows the error only after every language has been refused", async () => {
+    useFake();
+    vi.stubGlobal("navigator", { ...navigator, language: "en-LK", clipboard: navigator.clipboard });
+    mockApi({ body: success([]) });
+    const { user } = setup();
+    await user.click(await mic());
+    act(() => FakeRecognition.last!.onerror?.({ error: "service-not-allowed" }));
+    act(() => FakeRecognition.last!.onerror?.({ error: "service-not-allowed" }));
+    expect(await screen.findByText(/Voice search isn't available here/)).toBeInTheDocument();
+    expect(await mic()).toHaveAttribute("aria-pressed", "false");
   });
 
   it("recovers when the browser reports an error and never signals the end", async () => {
@@ -476,7 +518,8 @@ describe("voice search", () => {
     // With no confirmation from the browser, the session is forced closed so the next tap works.
     await waitFor(() => expect(session.abort).toHaveBeenCalled(), { timeout: 2500 });
     await user.click(await mic());
-    expect(session.start).toHaveBeenCalledTimes(2);
+    expect(FakeRecognition.last!.start).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Stop listening" })).toBeInTheDocument();
   });
 
   it("stops listening when Search is pressed or the mic is tapped again", async () => {
@@ -503,6 +546,18 @@ describe("voice search", () => {
     await user.click(await mic());
     act(() => FakeRecognition.last!.onerror?.({ error: "not-allowed" }));
     expect(await screen.findByText(/Microphone access is blocked/)).toBeInTheDocument();
+  });
+});
+
+describe("speechLanguages", () => {
+  it("maps unusual locales to ones speech services actually offer", () => {
+    expect(speechLanguages("en-US")).toEqual(["en-US"]);
+    expect(speechLanguages("en-GB")).toEqual(["en-GB", "en-US"]);
+    expect(speechLanguages("en-LK")).toEqual(["en-IN", "en-US"]);
+    expect(speechLanguages("en-ZW")).toEqual(["en-US"]);
+    expect(speechLanguages("fr-FR")).toEqual(["fr-FR", "en-US"]);
+    expect(speechLanguages("ta")).toEqual(["ta", "en-US"]);
+    expect(speechLanguages(undefined)).toEqual(["en-US"]);
   });
 });
 

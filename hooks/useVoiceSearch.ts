@@ -31,6 +31,37 @@ function getRecognition(): RecognitionConstructor | undefined {
   return scope.SpeechRecognition ?? scope.webkitSpeechRecognition;
 }
 
+/** English regions that speech services reliably offer. */
+const COMMON_ENGLISH = new Set(["en-US", "en-GB", "en-AU", "en-CA", "en-IN", "en-IE", "en-NZ", "en-ZA", "en-SG"]);
+/** Regions whose English is closest to the Indian English model. */
+const SOUTH_ASIA = new Set(["LK", "PK", "BD", "NP", "MV", "BT"]);
+
+/**
+ * Languages to try, best first. Safari hands speech to the operating system,
+ * which refuses outright ("service-not-allowed") when it has no recogniser for
+ * the exact locale, and many real browser locales such as en-LK have none. So
+ * an unusual English locale is mapped to a common one, and there is always a
+ * plain en-US fallback.
+ */
+export function speechLanguages(browserLanguage: string | undefined): string[] {
+  const [base = "en", region = ""] = (browserLanguage || "en-US").split("-");
+  const language = base.toLowerCase();
+  const tag = region ? `${language}-${region.toUpperCase()}` : language;
+  const candidates: string[] = [];
+
+  if (language === "en") {
+    if (COMMON_ENGLISH.has(tag)) candidates.push(tag);
+    else if (SOUTH_ASIA.has(region.toUpperCase())) candidates.push("en-IN");
+  } else {
+    candidates.push(tag);
+  }
+  candidates.push("en-US");
+  return [...new Set(candidates)];
+}
+
+/** Errors that mean "not in this language", worth retrying in another one. */
+const LANGUAGE_ERRORS = new Set(["service-not-allowed", "language-not-supported"]);
+
 /** Longest the microphone stays open waiting for speech. */
 const MAX_LISTEN_MS = 10_000;
 /** How long to wait for the browser to confirm a session has ended before forcing it. */
@@ -81,8 +112,10 @@ export interface VoiceSearch {
  * - A single recogniser is created once and reused for every search. Creating
  *   a new one per tap can leave the browser's speech service holding the
  *   microphone, after which nothing works until the browser is restarted.
- * - A session is always ended gracefully with `stop()`, and a new one never
- *   starts until the browser has confirmed the last one ended.
+ * - A session is ended gracefully with `stop()`. The microphone only ever
+ *   opens directly inside a tap, which browsers require.
+ * - If the browser refuses the visitor's exact language, the next closest one
+ *   is tried automatically before any error is shown.
  * - The session is released when the page is hidden or closed.
  */
 export function useVoiceSearch({ onHearing, onHeard }: VoiceSearchHandlers): VoiceSearch {
@@ -93,14 +126,18 @@ export function useVoiceSearch({ onHearing, onHeard }: VoiceSearchHandlers): Voi
   const recogniser = useRef<Recognition | null>(null);
   /** True from `start()` until the browser reports the session has ended. */
   const active = useRef(false);
-  /** Set when the visitor taps the microphone while the last session is still closing. */
-  const startWhenEnded = useRef(false);
+  /** Languages for this tap, and which one is being tried. */
+  const languages = useRef<string[]>(["en-US"]);
+  const attempt = useRef(0);
+  /** The language that last worked, tried first next time. */
+  const provenLanguage = useRef<string | null>(null);
   const heard = useRef("");
   const delivered = useRef(false);
   const silenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const graceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handlers = useRef({ onHearing, onHeard });
   const begin = useRef<() => void>(() => undefined);
+  const start = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     handlers.current = { onHearing, onHeard };
@@ -124,10 +161,23 @@ export function useVoiceSearch({ onHearing, onHeard }: VoiceSearchHandlers): Voi
       delivered.current = true;
       handlers.current.onHeard(phrase);
     }
+  }, [clearTimers]);
 
-    if (startWhenEnded.current) {
-      startWhenEnded.current = false;
-      begin.current();
+  /** Drops the current session at once, with no callbacks, so a new one can start cleanly. */
+  const discard = useCallback(() => {
+    clearTimers();
+    const session = recogniser.current;
+    recogniser.current = null;
+    active.current = false;
+    if (session) {
+      session.onresult = null;
+      session.onerror = null;
+      session.onend = null;
+      try {
+        session.abort();
+      } catch {
+        // Already released.
+      }
     }
   }, [clearTimers]);
 
@@ -168,6 +218,7 @@ export function useVoiceSearch({ onHearing, onHeard }: VoiceSearchHandlers): Voi
       const results = Array.from(event.results);
       const text = results.map((result) => result[0].transcript).join("");
       heard.current = text;
+      provenLanguage.current = session.lang;
       const shown = tidy(text);
       if (shown) handlers.current.onHearing(shown);
       // One phrase is one search. Ending gracefully lets the browser close the
@@ -175,6 +226,13 @@ export function useVoiceSearch({ onHearing, onHeard }: VoiceSearchHandlers): Voi
       if (results.length > 0 && results.every((result) => result.isFinal)) requestEnd();
     };
     session.onerror = (event) => {
+      // Refused for this language before hearing anything: try the next one straight away.
+      if (LANGUAGE_ERRORS.has(event.error) && !heard.current && attempt.current + 1 < languages.current.length) {
+        attempt.current += 1;
+        discard();
+        start.current();
+        return;
+      }
       // "aborted" and "no-speech" after something was heard are not failures.
       const benign = event.error === "aborted" || (event.error === "no-speech" && heard.current);
       if (!benign) setError(ERROR_MESSAGES[event.error] ?? GENERIC_ERROR);
@@ -185,36 +243,61 @@ export function useVoiceSearch({ onHearing, onHeard }: VoiceSearchHandlers): Voi
 
     recogniser.current = session;
     return session;
-  }, [finish, requestEnd]);
+  }, [discard, finish, requestEnd]);
 
   useEffect(() => {
-    begin.current = () => {
-      const session = getRecogniser();
-      if (!session) return;
-
-      heard.current = "";
-      delivered.current = false;
-      session.lang = navigator.language || "en-US";
-      setError(null);
+    /** Starts listening in the language currently selected by `attempt`. */
+    start.current = () => {
+      const language = languages.current[attempt.current] ?? "en-US";
+      const open = () => {
+        const session = getRecogniser();
+        if (!session) return false;
+        session.lang = language;
+        session.start();
+        return true;
+      };
 
       try {
-        session.start();
+        if (!open()) return;
       } catch {
-        // The browser still considers the last session open: close it and try once more after it ends.
-        active.current = true;
-        startWhenEnded.current = true;
-        requestEnd();
-        return;
+        // The browser still considers an old session open. Replace it and try once more.
+        discard();
+        try {
+          if (!open()) return;
+        } catch {
+          discard();
+          setListening(false);
+          setError(GENERIC_ERROR);
+          return;
+        }
       }
 
       active.current = true;
       setListening(true);
+      if (silenceTimer.current) clearTimeout(silenceTimer.current);
       silenceTimer.current = setTimeout(() => {
         if (!heard.current) setError(ERROR_MESSAGES["no-speech"]);
         requestEnd();
       }, MAX_LISTEN_MS);
     };
-  }, [getRecogniser, requestEnd]);
+
+    /** A fresh tap on the microphone. Always starts immediately, inside the tap itself. */
+    begin.current = () => {
+      // A previous session that is still closing is dropped rather than waited for:
+      // browsers only allow the microphone to open in direct response to a tap.
+      if (active.current) discard();
+
+      heard.current = "";
+      delivered.current = false;
+      const options = speechLanguages(navigator.language);
+      languages.current = provenLanguage.current
+        ? [provenLanguage.current, ...options.filter((option) => option !== provenLanguage.current)]
+        : options;
+      attempt.current = 0;
+      setError(null);
+      start.current();
+    };
+  }, [discard, getRecogniser, requestEnd]);
 
   // Checked after mount so the server and the first client render agree.
   useEffect(() => {
@@ -222,7 +305,6 @@ export function useVoiceSearch({ onHearing, onHeard }: VoiceSearchHandlers): Voi
 
     // Let go of the microphone whenever the page is hidden, closed or navigated away from.
     const release = () => {
-      startWhenEnded.current = false;
       if (!active.current) return;
       try {
         recogniser.current?.abort();
@@ -245,20 +327,11 @@ export function useVoiceSearch({ onHearing, onHeard }: VoiceSearchHandlers): Voi
     };
   }, [clearTimers]);
 
-  const stop = useCallback(() => {
-    startWhenEnded.current = false;
-    requestEnd();
-  }, [requestEnd]);
+  const stop = useCallback(() => requestEnd(), [requestEnd]);
 
   const toggle = useCallback(() => {
-    if (listening) {
-      stop();
-    } else if (active.current) {
-      // The last session is still closing: start as soon as the browser confirms it has ended.
-      startWhenEnded.current = true;
-    } else {
-      begin.current();
-    }
+    if (listening) stop();
+    else begin.current();
   }, [listening, stop]);
 
   return { supported, listening, error, toggle, stop };
