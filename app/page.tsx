@@ -1,11 +1,26 @@
+import type { Metadata } from "next";
+import { AboutSection } from "@/components/AboutSection";
+import { FaqSection } from "@/components/FaqSection";
+import { HowToSection } from "@/components/HowToSection";
+import { JsonLd } from "@/components/JsonLd";
 import { MobileTabBar } from "@/components/MobileTabBar";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SongFinder } from "@/components/SongFinder";
 import { SEARCH_INPUT_ID } from "@/lib/search/constants";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { homeGraph } from "@/lib/seo/structured-data";
+import { site } from "@/lib/site";
+
+export const metadata: Metadata = pageMetadata({
+  title: site.title,
+  description: site.description,
+  path: "/",
+});
 
 export default function HomePage() {
   return (
     <div className="page">
+      <JsonLd data={homeGraph()} />
       <main id="main">
         <SongFinder
           headline={
@@ -17,6 +32,12 @@ export default function HomePage() {
             </h1>
           }
         />
+        <hr className="rule" />
+        <HowToSection />
+        <hr className="rule" />
+        <FaqSection />
+        <hr className="rule" />
+        <AboutSection />
       </main>
       <hr className="rule" />
       <SiteFooter />
