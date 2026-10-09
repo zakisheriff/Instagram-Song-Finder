@@ -33,15 +33,14 @@ function getRecognition(): RecognitionConstructor | undefined {
 
 /** English regions that speech services reliably offer. */
 const COMMON_ENGLISH = new Set(["en-US", "en-GB", "en-AU", "en-CA", "en-IN", "en-IE", "en-NZ", "en-ZA", "en-SG"]);
-/** Regions whose English is closest to the Indian English model. */
-const SOUTH_ASIA = new Set(["LK", "PK", "BD", "NP", "MV", "BT"]);
 
 /**
  * Languages to try, best first. Safari hands speech to the operating system,
  * which refuses outright ("service-not-allowed") when it has no recogniser for
- * the exact locale, and many real browser locales such as en-LK have none. So
- * an unusual English locale is mapped to a common one, and there is always a
- * plain en-US fallback.
+ * the exact locale, while some unavailable models incorrectly end with
+ * "no-speech". Many real browser locales such as en-LK have no matching Apple
+ * speech model, so unusual English locales go straight to the broadly
+ * available en-US model instead of guessing a geographically nearby dialect.
  */
 export function speechLanguages(browserLanguage: string | undefined): string[] {
   const [base = "en", region = ""] = (browserLanguage || "en-US").split("-");
@@ -51,7 +50,6 @@ export function speechLanguages(browserLanguage: string | undefined): string[] {
 
   if (language === "en") {
     if (COMMON_ENGLISH.has(tag)) candidates.push(tag);
-    else if (SOUTH_ASIA.has(region.toUpperCase())) candidates.push("en-IN");
   } else {
     candidates.push(tag);
   }

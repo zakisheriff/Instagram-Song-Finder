@@ -476,14 +476,13 @@ describe("voice search", () => {
 
   it("uses a language the device supports and falls back without showing an error", async () => {
     useFake();
-    vi.stubGlobal("navigator", { ...navigator, language: "en-LK", clipboard: navigator.clipboard });
+    vi.stubGlobal("navigator", { ...navigator, language: "en-GB", clipboard: navigator.clipboard });
     const fetchMock = mockApi({ body: success([track()]) });
     const { user, input } = setup();
 
     await user.click(await mic());
     const first = FakeRecognition.last!;
-    // en-LK has no recogniser on Apple devices; the closest common English is tried first.
-    expect(first.lang).toBe("en-IN");
+    expect(first.lang).toBe("en-GB");
 
     // The device refuses that one too: the next language is tried once this session has closed.
     act(() => first.onerror?.({ error: "service-not-allowed" }));
@@ -507,7 +506,7 @@ describe("voice search", () => {
 
   it("shows the error only after every language has been refused", async () => {
     useFake();
-    vi.stubGlobal("navigator", { ...navigator, language: "en-LK", clipboard: navigator.clipboard });
+    vi.stubGlobal("navigator", { ...navigator, language: "en-GB", clipboard: navigator.clipboard });
     mockApi({ body: success([]) });
     const { user } = setup();
     await user.click(await mic());
@@ -593,7 +592,8 @@ describe("speechLanguages", () => {
   it("maps unusual locales to ones speech services actually offer", () => {
     expect(speechLanguages("en-US")).toEqual(["en-US"]);
     expect(speechLanguages("en-GB")).toEqual(["en-GB", "en-US"]);
-    expect(speechLanguages("en-LK")).toEqual(["en-IN", "en-US"]);
+    // Safari exposes en-LK on this Mac, but Apple has no en-LK speech model.
+    expect(speechLanguages("en-LK")).toEqual(["en-US"]);
     expect(speechLanguages("en-ZW")).toEqual(["en-US"]);
     expect(speechLanguages("fr-FR")).toEqual(["fr-FR", "en-US"]);
     expect(speechLanguages("ta")).toEqual(["ta", "en-US"]);
