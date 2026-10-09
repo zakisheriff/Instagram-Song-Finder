@@ -127,6 +127,8 @@ export function SongFinder({ headline }: SongFinderProps) {
           onSelect={setPickedId}
         />
 
+        <FeedbackLinks className="panel__feedback" />
+
         <p className="panel__byline">
           <span>from</span>
           <a href={site.publisher.url} target="_blank" rel="noopener">

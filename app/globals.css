@@ -1084,9 +1084,9 @@ select {
   bottom: 20px;
 }
 
-.footer__feedback {
+/* Phone-only copy, shown at the bottom of the first screen. */
+.panel__feedback {
   display: none;
-  margin-top: 4px;
 }
 
 /* ---------- Top-right action ---------- */
@@ -1313,8 +1313,7 @@ select {
     flex-direction: column;
     align-items: center;
     gap: 2px;
-    margin-top: auto;
-    padding-top: 48px;
+    margin-top: 16px;
   }
 
   .panel__byline a {
@@ -1334,13 +1333,15 @@ select {
     max-width: none;
   }
 
-  /* The hero is not full height on phones, so the links move to the footer. */
+  /* On phones the links sit at the bottom of the first screen, above the byline. */
   .hero__feedback {
     display: none;
   }
 
-  .footer__feedback {
+  .panel__feedback {
     display: block;
+    margin-top: auto;
+    padding-top: 40px;
   }
 
   .top-action {

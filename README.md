@@ -95,7 +95,7 @@ An ISRC identifies **one specific recording**, so searching by code is a precise
   Answers text and ISRC searches when Spotify is not configured, rate limited or down.
 
 - **Labelled Sources**  
-  Every response comes from a single catalog and is marked "Data from Spotify" or "Data from Deezer".
+  Every response comes from a single catalog. Results from Spotify are marked "Data from Spotify", as its terms require.
 
 - **Spotify Requirements**  
   The Spotify account that owns the app needs an active Premium subscription, and Development Mode quota is small and shared. Spotify links and URIs can only be resolved through Spotify.

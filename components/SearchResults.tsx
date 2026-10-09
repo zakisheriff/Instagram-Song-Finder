@@ -116,7 +116,8 @@ export function SearchResults({ search, selectedId, onSelect }: SearchResultsPro
                   ? `Recordings with ISRC ${result.query}`
                   : "Exact match for your Spotify link"}
             </span>
-            <span>Data from {result.provider.name}</span>
+            {/* Spotify's terms ask for attribution wherever its data is shown. */}
+            {result.provider.id === "spotify" && <span>Data from {result.provider.name}</span>}
           </div>
 
           <ul className="results__list">

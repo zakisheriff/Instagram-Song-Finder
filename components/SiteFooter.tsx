@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { site } from "@/lib/site";
-import { FeedbackLinks } from "./FeedbackLinks";
 
 const LINKS: ReadonlyArray<{ href: string; label: string; external?: boolean }> = [
   { href: site.publisher.url, label: site.publisher.name, external: true },
@@ -30,7 +29,6 @@ export function SiteFooter() {
           ))}
         </ul>
       </nav>
-      <FeedbackLinks className="footer__feedback" />
       <p className="footer__meta">
         <span>English</span>
         <span>

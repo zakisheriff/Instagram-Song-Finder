@@ -169,14 +169,14 @@ test("the top-right pill links to GitHub, then becomes Try now past the hero", a
   await expect(star).toBeVisible();
 });
 
-test("bug reports and feature requests open an email to The Atom", async ({ page }) => {
+test("bug reports and missing-song reports open an email to The Atom", async ({ page }) => {
   await page.goto("/");
   const bug = page.getByRole("link", { name: "Report a bug" }).filter({ visible: true });
-  const feature = page.getByRole("link", { name: "Request a feature" }).filter({ visible: true });
+  const feature = page.getByRole("link", { name: "Missing a song? Tell us" }).filter({ visible: true });
   await expect(bug).toHaveCount(1);
   await expect(feature).toHaveCount(1);
   await expect(bug).toHaveAttribute("href", /^mailto:info@theatom\.lk\?subject=Bug%20report/);
-  await expect(feature).toHaveAttribute("href", /^mailto:info@theatom\.lk\?subject=Feature%20request/);
+  await expect(feature).toHaveAttribute("href", /^mailto:info@theatom\.lk\?subject=Missing%20song/);
 });
 
 test("matches the reference field and button metrics", async ({ page }) => {
