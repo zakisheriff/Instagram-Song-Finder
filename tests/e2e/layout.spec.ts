@@ -64,6 +64,23 @@ test("uses the two-column reference layout on desktop and the stacked one on pho
   }
 });
 
+test("on phones the landing fills the first screen and the guide starts below it", async ({
+  page,
+}) => {
+  test.skip(!isPhoneLayout(page), "phone layout only");
+  await page.goto("/");
+  const viewportHeight = page.viewportSize()!.height;
+  const tabBar = await page.getByRole("navigation", { name: "Sections" }).boundingBox();
+  const byline = await page.locator(".panel__byline").boundingBox();
+  const guide = await page.getByRole("heading", { name: "How to use an ISRC code on Instagram" }).boundingBox();
+
+  // "from The Atom" sits at the bottom of the first screen, just above the tab bar.
+  expect(byline!.y + byline!.height).toBeLessThanOrEqual(tabBar!.y);
+  expect(byline!.y).toBeGreaterThan(viewportHeight * 0.75);
+  // Nothing from the next section is visible until the visitor scrolls.
+  expect(guide!.y).toBeGreaterThanOrEqual(tabBar!.y);
+});
+
 test("matches the reference field and button metrics", async ({ page }) => {
   await page.goto("/");
   const field = await page.locator(".field").boundingBox();
