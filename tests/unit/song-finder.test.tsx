@@ -335,6 +335,37 @@ describe("voice search", () => {
     expect(screen.getByRole("button", { name: "Search by voice" })).toBeInTheDocument();
   });
 
+  it("stops listening when the browser reports an error but never signals the end", async () => {
+    vi.stubGlobal("webkitSpeechRecognition", FakeRecognition);
+    mockApi({ body: success([]) });
+    const { user } = setup();
+    await user.click(await screen.findByRole("button", { name: "Search by voice" }));
+    // Note: no onend call, which is what some browsers do.
+    act(() => FakeRecognition.last!.onerror?.({ error: "service-not-allowed" }));
+
+    expect(await screen.findByText(/Voice search isn't available here/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Search by voice" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByText(/Listening/)).not.toBeInTheDocument();
+  });
+
+  it("stops listening when Search is pressed or the mic is tapped again", async () => {
+    vi.stubGlobal("webkitSpeechRecognition", FakeRecognition);
+    mockApi({ body: success([]) });
+    const { user } = setup();
+
+    await user.click(await screen.findByRole("button", { name: "Search by voice" }));
+    const first = FakeRecognition.last!;
+    await user.click(screen.getByRole("button", { name: /^Search$/ }));
+    expect(first.abort).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Search by voice" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Search by voice" }));
+    const second = FakeRecognition.last!;
+    await user.click(screen.getByRole("button", { name: "Stop listening" }));
+    expect(second.abort).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Search by voice" })).toBeInTheDocument();
+  });
+
   it("explains a blocked microphone", async () => {
     vi.stubGlobal("webkitSpeechRecognition", FakeRecognition);
     mockApi({ body: success([]) });

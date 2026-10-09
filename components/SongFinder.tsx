@@ -36,6 +36,8 @@ export function SongFinder({ headline }: SongFinderProps) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Pressing Search always ends voice input.
+    voice.stop();
     if (search.canSubmit) search.submit();
   }
 
@@ -72,7 +74,11 @@ export function SongFinder({ headline }: SongFinderProps) {
               type="search"
               name="q"
               value={search.query}
-              onChange={(event) => search.setQuery(event.target.value)}
+              onChange={(event) => {
+                // Typing takes over from voice input.
+                voice.stop();
+                search.setQuery(event.target.value);
+              }}
               placeholder=" "
               maxLength={MAX_QUERY_LENGTH * 4}
               autoComplete="off"

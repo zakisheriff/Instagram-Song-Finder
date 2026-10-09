@@ -31,9 +31,13 @@ function getRecognition(): RecognitionConstructor | undefined {
   return scope.SpeechRecognition ?? scope.webkitSpeechRecognition;
 }
 
+/** Longest the microphone stays open waiting for speech. */
+const MAX_LISTEN_MS = 10_000;
+
 const ERROR_MESSAGES: Record<string, string> = {
   "not-allowed": "Microphone access is blocked. Allow it in your browser settings and try again.",
-  "service-not-allowed": "Voice search isn't allowed in this browser. Type the song name instead.",
+  "service-not-allowed":
+    "Voice search isn't available here. Turn on Dictation or Siri in your device settings, try Chrome or Safari, or type the song name.",
   "no-speech": "We didn't catch that. Tap the microphone and say the song name again.",
   "audio-capture": "No microphone was found. Type the song name instead.",
   network: "Voice search needs an internet connection. Check yours and try again.",
@@ -45,6 +49,8 @@ export interface VoiceSearch {
   listening: boolean;
   error: string | null;
   toggle: () => void;
+  /** Stops listening immediately. Safe to call when not listening. */
+  stop: () => void;
 }
 
 /**
@@ -57,6 +63,7 @@ export function useVoiceSearch(onTranscript: (text: string) => void): VoiceSearc
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const recognition = useRef<Recognition | null>(null);
+  const silenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handler = useRef(onTranscript);
 
   useEffect(() => {
@@ -68,13 +75,34 @@ export function useVoiceSearch(onTranscript: (text: string) => void): VoiceSearc
     const frame = requestAnimationFrame(() => setSupported(Boolean(getRecognition())));
     return () => {
       cancelAnimationFrame(frame);
+      if (silenceTimer.current) clearTimeout(silenceTimer.current);
       recognition.current?.abort();
     };
   }, []);
 
+  /** Ends the current session straight away, without waiting for the browser to confirm. */
+  const stop = useCallback(() => {
+    if (silenceTimer.current) clearTimeout(silenceTimer.current);
+    silenceTimer.current = null;
+    const session = recognition.current;
+    recognition.current = null;
+    setListening(false);
+    if (session) {
+      // Detach first so a late event from this session can't restart the UI state.
+      session.onresult = null;
+      session.onerror = null;
+      session.onend = null;
+      try {
+        session.abort();
+      } catch {
+        // Already stopped.
+      }
+    }
+  }, []);
+
   const toggle = useCallback(() => {
     if (recognition.current) {
-      recognition.current.stop();
+      stop();
       return;
     }
     const Recognition = getRecognition();
@@ -87,34 +115,40 @@ export function useVoiceSearch(onTranscript: (text: string) => void): VoiceSearc
     session.maxAlternatives = 1;
 
     session.onresult = (event) => {
-      const text = Array.from(event.results)
+      const results = Array.from(event.results);
+      const text = results
         .map((result) => result[0].transcript)
         .join("")
         .trim();
       if (text) handler.current(text);
+      // One phrase is one search: finish as soon as the browser is sure of it.
+      if (results.some((result) => result.isFinal)) stop();
     };
     session.onerror = (event) => {
+      // Some browsers report an error and never signal the end, so end it here.
+      stop();
       // "aborted" just means the visitor stopped it.
       if (event.error !== "aborted") {
         setError(ERROR_MESSAGES[event.error] ?? "Voice search didn't work. Type the song name instead.");
       }
     };
-    session.onend = () => {
-      recognition.current = null;
-      setListening(false);
-    };
+    session.onend = stop;
 
     recognition.current = session;
     setError(null);
     setListening(true);
+    // Never leave the microphone open indefinitely if nothing is heard.
+    silenceTimer.current = setTimeout(() => {
+      stop();
+      setError(ERROR_MESSAGES["no-speech"]);
+    }, MAX_LISTEN_MS);
     try {
       session.start();
     } catch {
-      recognition.current = null;
-      setListening(false);
+      stop();
       setError("Voice search didn't start. Type the song name instead.");
     }
-  }, []);
+  }, [stop]);
 
-  return { supported, listening, error, toggle };
+  return { supported, listening, error, toggle, stop };
 }
