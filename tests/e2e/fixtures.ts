@@ -108,7 +108,7 @@ export const test = base.extend<Mocks>({
 export { expect };
 
 export const searchBox = (page: Page) =>
-  page.getByRole("searchbox", { name: "Song, artist, Spotify link or ISRC" });
+  page.getByRole("searchbox", { name: "Song, artist, music link or ISRC" });
 
 export const isPhoneLayout = (page: Page) => (page.viewportSize()?.width ?? 0) <= 875;
 
