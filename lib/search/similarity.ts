@@ -54,6 +54,17 @@ export function trackSimilarity(query: string, track: Track): number {
   return total / queryWords.length;
 }
 
+/** How alike two titles or names are, whichever of them is the longer one. */
+export function textSimilarity(a: string, b: string): number {
+  const score = (from: string[], to: string[]) =>
+    from.reduce((sum, word) => sum + Math.max(...to.map((other) => wordSimilarity(word, other))), 0) /
+    from.length;
+  const first = tokenize(a);
+  const second = tokenize(b);
+  if (first.length === 0 || second.length === 0) return 0;
+  return Math.max(score(first, second), score(second, first));
+}
+
 /** Number of leading results considered when judging a page. */
 const PAGE_SAMPLE = 5;
 

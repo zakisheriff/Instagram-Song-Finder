@@ -71,6 +71,8 @@ export interface LinkSearch {
   names: string[];
   /** Catalog searches to try in order, most specific first. */
   queries: string[];
+  /** Names that may be the artist: the uploader and any credits in the title. */
+  credits: string[];
 }
 
 const tidy = (text: string) => text.replace(/\s+/g, " ").trim().slice(0, 150);
@@ -83,10 +85,11 @@ const tidy = (text: string) => text.replace(/\s+/g, " ").trim().slice(0, 150);
 export function linkTitleToSearch(service: TitleLinkService, link: LinkTitle): LinkSearch {
   let title = link.title.replace(VIDEO_NOISE, " ");
   let author = link.author;
+  let extras: string[] = [];
 
   if (service === "youtube") {
     // Label uploads read "Song Lyric | Film | Cast | Composer".
-    title = title.split(/\s[|｜]\s/)[0];
+    [title, ...extras] = title.split(/\s[|｜]\s/);
     author = author.replace(/\s*-\s*Topic$/i, "").replace(/(VEVO|Official)$/i, "");
   } else {
     // SoundCloud titles read "Song by Artist".
@@ -115,5 +118,6 @@ export function linkTitleToSearch(service: TitleLinkService, link: LinkTitle): L
     song: title,
     names: names.map(tidy).filter(Boolean),
     queries: [...new Set(queries.map(tidy))].filter(Boolean),
+    credits: [...new Set([dash ? title.slice(0, dash.index) : "", author, ...extras].map(tidy))].filter(Boolean),
   };
 }

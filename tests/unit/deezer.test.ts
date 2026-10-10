@@ -99,4 +99,35 @@ describe("DeezerProvider", () => {
     expect(await provider.getTrack("../secret")).toBeNull();
     expect(calls).toHaveLength(0);
   });
+
+  it("finds a new song through its artist's releases", async () => {
+    const { provider, calls } = make({
+      [`${DEEZER_API}/search/artist`]: () => json({ data: [{ id: 9, name: "Other" }, { id: 7, name: "Sushin Shyam" }] }),
+      [`${DEEZER_API}/artist/7/albums`]: () =>
+        json({
+          data: [
+            { id: 1, title: "Old Score", release_date: "2019-01-01" },
+            { id: 2, title: "Aathi Iva Yarraa", release_date: "2019-02-01", cover_medium: "https://cdn-images.dzcdn.net/c.jpg" },
+          ],
+        }),
+      [`${DEEZER_API}/album/2/tracks`]: () =>
+        json({
+          data: [
+            deezerTrack({ id: 20, title: 'Aathi Iva Yarraa (From "Scene")', isrc: "INS172607243", album: undefined }),
+            deezerTrack({ id: 21, title: 'Scenuke Scene (From "Scene")', isrc: "INS172606735", album: undefined }),
+          ],
+        }),
+    });
+    const tracks = await provider.findInArtistReleases('Aathi Iva Yarraa (From "Scene")', ["Sushin Shyam"]);
+    expect(tracks).toMatchObject([
+      { id: "deezer:20", isrc: "INS172607243", album: "Aathi Iva Yarraa", releaseDate: "2019-02-01", artworkUrl: "https://cdn-images.dzcdn.net/c.jpg" },
+    ]);
+    expect(calls.some((call) => call.url.includes("/album/1/"))).toBe(false);
+  });
+
+  it("returns nothing when the artist isn't in the catalog", async () => {
+    const { provider, calls } = make({ [`${DEEZER_API}/search/artist`]: () => json({ data: [{ id: 9, name: "Someone Else" }] }) });
+    expect(await provider.findInArtistReleases("Song", ["Sushin Shyam"])).toEqual([]);
+    expect(calls).toHaveLength(1);
+  });
 });

@@ -65,4 +65,13 @@ export interface MusicProvider {
   findByIsrc(isrc: string, options?: ProviderRequestOptions): Promise<Track[]>;
   /** Looks up one recording by this provider's own track id. */
   getTrack(trackId: string, options?: ProviderRequestOptions): Promise<Track | null>;
+  /**
+   * Finds a song among the given artists' releases. Catalog search can lag a
+   * few days behind new releases, while an artist's release list does not.
+   */
+  findInArtistReleases?(
+    title: string,
+    artists: string[],
+    options?: ProviderRequestOptions,
+  ): Promise<Track[]>;
 }

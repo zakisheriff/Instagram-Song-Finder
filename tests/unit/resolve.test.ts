@@ -247,6 +247,42 @@ describe("resolveQuery: links from other services", () => {
     expect(result.tracks).toEqual([song]);
   });
 
+  it("finds a release too new for catalog search through its artist", async () => {
+    const song = track({ provider: "deezer", id: "deezer:20", title: 'Aathi Iva Yarraa (From "Scene")', artists: ["Sushin Shyam"] });
+    const findInArtistReleases = vi.fn(async () => [song]);
+    const deezer = stubProvider("deezer", { findInArtistReleases });
+    const searchAppleSongs = vi.fn(async () => [
+      { title: 'Aathi Iva Yarraa (From "Scene")', artist: "Sushin Shyam & Rajpriyan", durationMs: 187764 },
+    ]);
+
+    const fromLink = await resolveQuery("https://youtu.be/bN1t-9ZH-uU", {
+      providers: [deezer],
+      cache,
+      searchAppleSongs,
+      fetchLinkTitle: async () => ({ title: "Aathi Iva Yarraa Lyric | SCENE | Suriya", author: "Sony Music South" }),
+    });
+    expect(searchAppleSongs).toHaveBeenCalledWith("Aathi Iva Yarraa");
+    expect(findInArtistReleases).toHaveBeenCalledWith('Aathi Iva Yarraa (From "Scene")', [
+      "Sushin Shyam",
+      "Rajpriyan",
+      "Sony Music South",
+      "SCENE",
+    ]);
+    expect(fromLink).toMatchObject({ kind: "link-match", tracks: [song] });
+
+    const typed = await resolveQuery("aathi iva yarraa", { providers: [deezer], cache: new TtlCache<unknown>(), searchAppleSongs });
+    expect(typed).toMatchObject({ kind: "text", provider: { id: "deezer" }, tracks: [song], nextOffset: null });
+  });
+
+  it("leaves a confident search alone", async () => {
+    const findInArtistReleases = vi.fn(async () => []);
+    const searchAppleSongs = vi.fn(async () => []);
+    const deezer = stubProvider("deezer", { searchTracks: vi.fn(async () => page([track({ provider: "deezer" })])), findInArtistReleases });
+    await resolveQuery("die with a smile", { providers: [deezer], cache, searchAppleSongs });
+    expect(searchAppleSongs).not.toHaveBeenCalled();
+    expect(findInArtistReleases).not.toHaveBeenCalled();
+  });
+
   it("offers nothing rather than a different song", async () => {
     const wrong = track({ provider: "deezer", title: "Aathi", artists: ["Anirudh Ravichander"], album: "Kaththi" });
     const deezer = stubProvider("deezer", { searchTracks: vi.fn(async () => page([wrong])) });
@@ -280,11 +316,13 @@ describe("link titles", () => {
       song: "Blinding Lights",
       names: ["Blinding Lights"],
       queries: ["Blinding Lights The Weeknd", "Blinding Lights"],
+      credits: ["The Weeknd"],
     });
     expect(linkTitleToSearch("youtube", { title: "Artist - Song [Lyrics] | Extra", author: "SomeChannel" })).toEqual({
       song: "Artist - Song",
       names: ["Artist - Song", "Song"],
       queries: ["Artist - Song", "Song", "Artist"],
+      credits: ["Artist", "SomeChannel", "Extra"],
     });
     expect(linkTitleToSearch("soundcloud", { title: "Flickermood by Forss", author: "Forss" }).queries[0]).toBe("Flickermood Forss");
   });

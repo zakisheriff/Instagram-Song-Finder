@@ -7,7 +7,11 @@ import type {
   SearchPage,
   Track,
 } from "@/lib/music/types";
-import { lookupAppleTrack as defaultLookupAppleTrack, type AppleTrack } from "@/lib/apple/lookup";
+import {
+  lookupAppleTrack as defaultLookupAppleTrack,
+  searchAppleSongs as defaultSearchAppleSongs,
+  type AppleTrack,
+} from "@/lib/apple/lookup";
 import {
   fetchLinkTitle as defaultFetchLinkTitle,
   linkTitleToSearch,
@@ -18,7 +22,7 @@ import {
 import { fetchSpotifyTitle as defaultFetchSpotifyTitle } from "@/lib/spotify/oembed";
 import { resolveSpotifyShortLink } from "@/lib/spotify/short-link";
 import { detectInput, MIN_TEXT_QUERY_LENGTH } from "./detect";
-import { pageSimilarity, relaxedQueries, trackSimilarity } from "./similarity";
+import { pageSimilarity, relaxedQueries, textSimilarity, trackSimilarity } from "./similarity";
 
 export type ResolvedKind = "text" | "isrc" | "spotify-track" | "link-match";
 
@@ -43,6 +47,7 @@ export interface ResolveOptions {
   provider?: ProviderId;
   resolveShortLink?: (url: string) => Promise<string>;
   lookupAppleTrack?: (trackId: string, country: string) => Promise<AppleTrack | null>;
+  searchAppleSongs?: (term: string) => Promise<AppleTrack[]>;
   fetchSpotifyTitle?: (trackId: string) => Promise<string | null>;
   fetchLinkTitle?: (service: TitleLinkService, url: string) => Promise<LinkTitle | null>;
   cache?: TtlCache<unknown>;
@@ -91,6 +96,54 @@ async function firstSuccessful<T>(
 
   if (emptyResult) return emptyResult;
   throw failure ?? new MusicError("NOT_CONFIGURED", "No music provider is configured");
+}
+
+/** Most artists whose releases are checked for one song. */
+const MAX_RELEASE_ARTISTS = 4;
+
+/**
+ * Finds a song that catalog search doesn't return yet, which is usual for the
+ * first days after a release. Apple's public search names the artist, and the
+ * song is then read from that artist's releases. Never throws.
+ *
+ * `isWanted` decides whether a song Apple suggests is the one being looked for;
+ * `artistHints` are names already known that may be the artist.
+ */
+async function findNewRelease(
+  term: string,
+  isWanted: (song: AppleTrack) => boolean,
+  artistHints: string[],
+  options: ResolveOptions,
+  providers: MusicProvider[],
+): Promise<{ provider: MusicProvider; tracks: Track[] } | null> {
+  const capable = providers.filter((provider) => provider.isConfigured() && provider.findInArtistReleases);
+  if (capable.length === 0) return null;
+  const cache = options.cache ?? sharedCache;
+  const searchApple = options.searchAppleSongs ?? defaultSearchAppleSongs;
+
+  try {
+    const songs = (await cache.getOrLoad(`apple-search:${term.toLowerCase()}`, SEARCH_TTL_MS, () =>
+      searchApple(term),
+    )) as AppleTrack[];
+    const song = songs.find(isWanted);
+    if (!song && artistHints.length === 0) return null;
+
+    const title = song?.title ?? term;
+    const named = song ? song.artist.split(/,|&| feat\.? /i).map((name) => name.trim()) : [];
+    const artists = [...new Set([...named, ...artistHints])].filter(Boolean).slice(0, MAX_RELEASE_ARTISTS);
+
+    for (const provider of capable) {
+      const tracks = (await cache.getOrLoad(
+        `releases:${provider.info.id}:${title.toLowerCase()}:${artists.join("|").toLowerCase()}`,
+        SEARCH_TTL_MS,
+        () => provider.findInArtistReleases!(title, artists),
+      )) as Track[];
+      if (tracks.length > 0) return { provider, tracks };
+    }
+  } catch {
+    // A failed rescue leaves the ordinary search result as it was.
+  }
+  return null;
 }
 
 /**
@@ -162,6 +215,32 @@ export async function resolveQuery(raw: string, options: ResolveOptions): Promis
         const score = pageSimilarity(detected.query, page.tracks);
         if (!best || score > best.score + SWITCH_MARGIN) best = { provider, page, score };
         if (best.score >= CONFIDENT_MATCH) break;
+      }
+
+      // Nothing convincing: the song may be too new for catalog search.
+      if (!best || best.score < CONFIDENT_MATCH) {
+        const fresh = await findNewRelease(
+          detected.query,
+          (song) =>
+            trackSimilarity(detected.query, { title: song.title, artists: [song.artist], album: null } as Track) >=
+            CONFIDENT_MATCH,
+          [],
+          options,
+          available,
+        );
+        if (fresh) {
+          const sameCatalog = best?.provider === fresh.provider;
+          const known = new Set(fresh.tracks.map((track) => track.id));
+          const rest = sameCatalog ? best!.page.tracks.filter((track) => !known.has(track.id)) : [];
+          return {
+            kind: "text",
+            query: detected.query,
+            provider: fresh.provider.info,
+            tracks: [...fresh.tracks, ...rest],
+            nextOffset: sameCatalog ? best!.page.nextOffset : null,
+            total: sameCatalog ? best!.page.total : fresh.tracks.length,
+          };
+        }
       }
 
       if (best) {
@@ -383,6 +462,24 @@ export async function resolveQuery(raw: string, options: ResolveOptions): Promis
             };
           }
         }
+      }
+      const fresh = await findNewRelease(
+        wanted.names[wanted.names.length - 1],
+        (song) => wanted.names.some((name) => textSimilarity(name, song.title) >= LINK_MATCH),
+        wanted.credits,
+        options,
+        available,
+      );
+      if (fresh) {
+        return {
+          kind: "link-match",
+          query: wanted.song,
+          provider: fresh.provider.info,
+          tracks: fresh.tracks,
+          nextOffset: null,
+          total: fresh.tracks.length,
+          notice: `From your ${serviceName} link. Select the correct recording`,
+        };
       }
       throw (
         (answered ? undefined : failure) ??

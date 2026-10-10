@@ -50,3 +50,34 @@ export async function lookupAppleTrack(
     durationMs: typeof song.trackTimeMillis === "number" ? song.trackTimeMillis : null,
   };
 }
+
+/**
+ * Searches Apple's public catalog for songs. It lists new releases straight
+ * away, so it can name the artist of a song another catalog can't search for
+ * yet. Returns an empty list on any failure.
+ */
+export async function searchAppleSongs(term: string, deps: AppleLookupDeps = {}): Promise<AppleTrack[]> {
+  const params = new URLSearchParams({ term: term.slice(0, 150), entity: "song", limit: "5" });
+  try {
+    const response = await request(`https://itunes.apple.com/search?${params}`, {
+      headers: { Accept: "application/json" },
+      retries: 0,
+      timeoutMs: 4000,
+      fetchImpl: deps.fetchImpl,
+    });
+    if (!response.ok) {
+      await response.body?.cancel();
+      return [];
+    }
+    const body = await readJson<LookupResponse>(response);
+    return (body.results ?? [])
+      .filter((result) => result.kind === "song" && result.trackName)
+      .map((result) => ({
+        title: result.trackName ?? "",
+        artist: result.artistName ?? "",
+        durationMs: typeof result.trackTimeMillis === "number" ? result.trackTimeMillis : null,
+      }));
+  } catch {
+    return [];
+  }
+}
