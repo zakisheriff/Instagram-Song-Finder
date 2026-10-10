@@ -10,7 +10,7 @@ import type {
 import { lookupAppleTrack as defaultLookupAppleTrack, type AppleTrack } from "@/lib/apple/lookup";
 import {
   fetchLinkTitle as defaultFetchLinkTitle,
-  linkTitleToQuery,
+  linkTitleToSearch,
   TITLE_LINK_SERVICE_NAMES,
   type LinkTitle,
   type TitleLinkService,
@@ -56,6 +56,8 @@ const SHORT_LINK_TTL_MS = 10 * 60_000;
 const CONFIDENT_MATCH = 0.9;
 /** Another catalog must beat the preferred one by this much to replace it. */
 const SWITCH_MARGIN = 0.05;
+/** A result must match a link's title this well to be offered as that song. */
+const LINK_MATCH = 0.8;
 /** Two recordings this close in length are treated as the same one. */
 const LENGTH_TOLERANCE_MS = 3000;
 
@@ -333,23 +335,61 @@ export async function resolveQuery(raw: string, options: ResolveOptions): Promis
       const { link } = (await cache.getOrLoad(`link:${detected.url}`, TRACK_TTL_MS, async () => ({
         link: await fetchTitle(detected.service, detected.url),
       }))) as { link: LinkTitle | null };
-      const query = link ? linkTitleToQuery(detected.service, link) : "";
-      if (query.length < MIN_TEXT_QUERY_LENGTH) {
+      const wanted = link ? linkTitleToSearch(detected.service, link) : null;
+      if (!wanted || wanted.song.length < MIN_TEXT_QUERY_LENGTH) {
         throw new MusicError("NOT_FOUND", `Could not read ${detected.service} link`, {
           publicMessage: `That ${serviceName} link couldn't be read. Check it, or search by song title and artist.`,
         });
       }
-      const found = await resolveQuery(query, { ...options, offset: 0, provider: undefined });
-      if (found.tracks.length === 0) {
-        throw new MusicError("NOT_FOUND", `No catalog match for ${detected.service} link`, {
-          publicMessage: `No recording matching "${query}" was found. Try searching by song title and artist.`,
-        });
+
+      // Upload titles carry channel names and credits the catalog doesn't
+      // know, so each search is looser than the last and only results that
+      // are really this song are kept. Showing nothing beats a wrong song.
+      const available = candidates.filter((provider) => provider.isConfigured());
+      let failure: MusicError | undefined;
+      let answered = false;
+      const similarity = (track: Track) =>
+        Math.max(...wanted.names.map((name) => trackSimilarity(name, track)));
+      for (const query of wanted.queries) {
+        if (query.length < MIN_TEXT_QUERY_LENGTH) continue;
+        for (const provider of available) {
+          let page: SearchPage;
+          try {
+            page = (await cache.getOrLoad(
+              `search:${provider.info.id}:0:${query.toLowerCase()}`,
+              SEARCH_TTL_MS,
+              () => provider.searchTracks(query, { offset: 0 }),
+            )) as SearchPage;
+          } catch (error) {
+            if (!isMusicError(error) || !error.allowsFallback) throw error;
+            failure ??= error;
+            continue;
+          }
+          answered = true;
+          const matches = page.tracks
+            .map((track) => ({ track, score: similarity(track) }))
+            .filter(({ score }) => score >= LINK_MATCH)
+            .sort((a, b) => b.score - a.score)
+            .map(({ track }) => track);
+          if (matches.length > 0) {
+            return {
+              kind: "link-match",
+              query,
+              provider: provider.info,
+              tracks: matches,
+              nextOffset: null,
+              total: matches.length,
+              notice: `From your ${serviceName} link. Select the correct recording`,
+            };
+          }
+        }
       }
-      return {
-        ...found,
-        kind: "link-match",
-        notice: `From your ${serviceName} link. Select the correct recording`,
-      };
+      throw (
+        (answered ? undefined : failure) ??
+        new MusicError("NOT_FOUND", `No catalog match for ${detected.service} link`, {
+          publicMessage: `"${wanted.song}" isn't in the catalog we search yet. New releases can take a few days to appear. You can also try searching by song title and artist.`,
+        })
+      );
     }
 
     case "apple-music-track": {

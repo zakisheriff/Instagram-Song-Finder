@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TtlCache } from "@/lib/cache/ttl-cache";
 import { MusicError } from "@/lib/music/errors";
-import { linkTitleToQuery } from "@/lib/links/title";
+import { linkTitleToSearch } from "@/lib/links/title";
 import { resolveQuery } from "@/lib/search/resolve";
 import { editDistance, relaxedQueries, tokenize, trackSimilarity } from "@/lib/search/similarity";
 import { page, stubProvider, track } from "./helpers/stub-provider";
@@ -218,6 +218,47 @@ describe("resolveQuery: links from other services", () => {
     expect(result).toMatchObject({ kind: "link-match", notice: "From your YouTube link. Select the correct recording" });
   });
 
+  it("searches a YouTube Music title without the credits that hide the song", async () => {
+    const radhimaa = track({ provider: "deezer", title: 'Radhimaa (From "Think Indie")', artists: ["Sai Abhyankkar"], album: null });
+    const other = track({ provider: "deezer", id: "deezer:2", title: 'Aasa Kooda (From "Think Indie")', artists: ["Sai Abhyankkar"], album: null });
+    const deezer = stubProvider("deezer", { searchTracks: vi.fn(async () => page([other, radhimaa])) });
+    const result = await resolveQuery("https://music.youtube.com/watch?v=BmRX2g6-iQI&si=x", {
+      providers: [deezer],
+      cache,
+      fetchLinkTitle: async () => ({ title: 'Radhimaa (feat. Sai Smriti) [From "Think Indie"]', author: "Sai Abhyankkar - Topic" }),
+    });
+    expect(deezer.searchTracks).toHaveBeenCalledWith("Radhimaa Sai Abhyankkar", { offset: 0 });
+    expect(result.tracks.map((item) => item.title)).toEqual(['Radhimaa (From "Think Indie")']);
+  });
+
+  it("drops the uploader when a label's channel isn't the artist", async () => {
+    const song = track({ provider: "deezer", title: 'Aathi Iva Yarraa (From "Scene")', artists: ["Sushin Shyam"], album: null });
+    const searchTracks = vi.fn(async (query: string) => page(query === "Aathi Iva Yarraa" ? [song] : []));
+    const deezer = stubProvider("deezer", { searchTracks });
+    const result = await resolveQuery("https://youtu.be/bN1t-9ZH-uU", {
+      providers: [deezer],
+      cache,
+      fetchLinkTitle: async () => ({
+        title: "Aathi Iva Yarraa Lyric | SCENE | Suriya | Nazriya Nazim | Sushin Shyam",
+        author: "Sony Music South",
+      }),
+    });
+    expect(searchTracks.mock.calls.map(([query]) => query)).toEqual(["Aathi Iva Yarraa Sony Music South", "Aathi Iva Yarraa"]);
+    expect(result.tracks).toEqual([song]);
+  });
+
+  it("offers nothing rather than a different song", async () => {
+    const wrong = track({ provider: "deezer", title: "Aathi", artists: ["Anirudh Ravichander"], album: "Kaththi" });
+    const deezer = stubProvider("deezer", { searchTracks: vi.fn(async () => page([wrong])) });
+    await expect(
+      resolveQuery("https://youtu.be/bN1t-9ZH-uU", {
+        providers: [deezer],
+        cache,
+        fetchLinkTitle: async () => ({ title: "Aathi Iva Yarraa Lyric | SCENE", author: "Sony Music South" }),
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND", publicMessage: expect.stringContaining('"Aathi Iva Yarraa" isn\'t in the catalog') });
+  });
+
   it("says so when a link can't be read or matches nothing", async () => {
     const deezer = stubProvider("deezer");
     await expect(
@@ -235,11 +276,28 @@ describe("resolveQuery: links from other services", () => {
 
 describe("link titles", () => {
   it("strips video labels and uploader suffixes", () => {
-    expect(linkTitleToQuery("youtube", { title: "Blinding Lights (Official Audio)", author: "The Weeknd - Topic" })).toBe(
-      "Blinding Lights The Weeknd",
+    expect(linkTitleToSearch("youtube", { title: "Blinding Lights (Official Audio)", author: "The Weeknd - Topic" })).toEqual({
+      song: "Blinding Lights",
+      names: ["Blinding Lights"],
+      queries: ["Blinding Lights The Weeknd", "Blinding Lights"],
+    });
+    expect(linkTitleToSearch("youtube", { title: "Artist - Song [Lyrics] | Extra", author: "SomeChannel" })).toEqual({
+      song: "Artist - Song",
+      names: ["Artist - Song", "Song"],
+      queries: ["Artist - Song", "Song", "Artist"],
+    });
+    expect(linkTitleToSearch("soundcloud", { title: "Flickermood by Forss", author: "Forss" }).queries[0]).toBe("Flickermood Forss");
+  });
+
+  it("keeps brackets that name a different version", () => {
+    expect(linkTitleToSearch("youtube", { title: "Song (Slowed + Reverb) (feat. Guest)", author: "Artist" }).song).toBe(
+      "Song (Slowed + Reverb)",
     );
-    expect(linkTitleToQuery("youtube", { title: "Artist - Song [Lyrics] | Extra", author: "SomeChannel" })).toBe("Artist - Song");
-    expect(linkTitleToQuery("soundcloud", { title: "Flickermood by Forss", author: "Forss" })).toBe("Flickermood Forss");
+    expect(linkTitleToSearch("youtube", { title: "Luis Fonsi - Despacito ft. Daddy Yankee", author: "LuisFonsiVEVO" }).names).toEqual([
+      "Luis Fonsi - Despacito",
+      "Despacito",
+    ]);
+    expect(linkTitleToSearch("youtube", { title: "Love Song Lyrical Video", author: "Label" }).song).toBe("Love Song");
   });
 });
 

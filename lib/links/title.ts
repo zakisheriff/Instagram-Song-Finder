@@ -54,18 +54,39 @@ export async function fetchLinkTitle(
 
 /** Bracketed video labels that are not part of a song's name. */
 const VIDEO_NOISE =
-  /[([][^)\]]*\b(official|video|audio|lyrics?|visuali[sz]er|hd|hq|4k|mv|teaser|trailer|full song|out now)\b[^)\]]*[)\]]/gi;
+  /[([][^)\]]*\b(official|video|audio|lyrics?|lyrical|visuali[sz]er|hd|hq|4k|mv|teaser|trailer|full song|out now)\b[^)\]]*[)\]]/gi;
+
+/** Brackets worth keeping, because they name a different recording of the song. */
+const VERSION_WORDS =
+  /\b(remix(ed)?|mix|live|acoustic|unplugged|stripped|slowed|sped|nightcore|instrumental|karaoke|version|edit|extended|remaster(ed)?|demo|cover|reprise)\b/i;
+
+/** The same video labels written without brackets, at the end of a title. */
+const TRAILING_NOISE =
+  /\s+(official|lyrics?|lyrical|video|audio|visuali[sz]er|music video|(video|lyrical|full|audio|title) song|hd|4k)$/i;
+
+export interface LinkSearch {
+  /** The song as the link names it. */
+  song: string;
+  /** Ways the song may be written; a result matching any of them is the same song. */
+  names: string[];
+  /** Catalog searches to try in order, most specific first. */
+  queries: string[];
+}
+
+const tidy = (text: string) => text.replace(/\s+/g, " ").trim().slice(0, 150);
 
 /**
- * Turns a video or upload title into a catalog search, e.g.
- * "Artist - Song (Official Music Video)" becomes "Artist - Song".
+ * Turns a video or upload title into catalog searches, e.g.
+ * "Artist - Song (Official Music Video)" becomes "Artist - Song", and
+ * `Song (feat. Guest) [From "Film"]` on an artist's channel becomes "Song Artist".
  */
-export function linkTitleToQuery(service: TitleLinkService, link: LinkTitle): string {
+export function linkTitleToSearch(service: TitleLinkService, link: LinkTitle): LinkSearch {
   let title = link.title.replace(VIDEO_NOISE, " ");
   let author = link.author;
 
   if (service === "youtube") {
-    title = title.split(" | ")[0];
+    // Label uploads read "Song Lyric | Film | Cast | Composer".
+    title = title.split(/\s[|｜]\s/)[0];
     author = author.replace(/\s*-\s*Topic$/i, "").replace(/(VEVO|Official)$/i, "");
   } else {
     // SoundCloud titles read "Song by Artist".
@@ -76,6 +97,23 @@ export function linkTitleToQuery(service: TitleLinkService, link: LinkTitle): st
     }
   }
 
-  const hasArtist = /\s[-–—]\s/.test(title);
-  return (hasArtist ? title : `${title} ${author}`).replace(/\s+/g, " ").trim().slice(0, 150);
+  // Credits and film names in brackets differ between services; versions don't.
+  title = title.replace(/[([][^)\]]*[)\]]/g, (part) => (VERSION_WORDS.test(part) ? part : " "));
+  // Guest credits written without brackets: "Artist - Song ft. Guest".
+  title = tidy(title.replace(/\s(ft|feat|featuring)\.?\s.*$/i, " "));
+  while (TRAILING_NOISE.test(title)) title = title.replace(TRAILING_NOISE, "");
+
+  const dash = title.match(/\s[-–—]\s/);
+  const queries = dash
+    ? [title, title.slice(dash.index! + dash[0].length), title.slice(0, dash.index)]
+    : [`${title} ${author}`, title];
+
+  // Catalogs often list only the main artist, so "Artist - Song" also matches on the song alone.
+  const names = dash ? [title, title.slice(dash.index! + dash[0].length)] : [title];
+
+  return {
+    song: title,
+    names: names.map(tidy).filter(Boolean),
+    queries: [...new Set(queries.map(tidy))].filter(Boolean),
+  };
 }
