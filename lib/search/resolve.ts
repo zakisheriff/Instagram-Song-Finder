@@ -47,7 +47,7 @@ export interface ResolveOptions {
   provider?: ProviderId;
   resolveShortLink?: (url: string) => Promise<string>;
   lookupAppleTrack?: (trackId: string, country: string) => Promise<AppleTrack | null>;
-  searchAppleSongs?: (term: string) => Promise<AppleTrack[]>;
+  searchAppleSongs?: (term: string) => Promise<AppleTrack[] | null>;
   fetchSpotifyTitle?: (trackId: string) => Promise<string | null>;
   fetchLinkTitle?: (service: TitleLinkService, url: string) => Promise<LinkTitle | null>;
   cache?: TtlCache<unknown>;
@@ -127,9 +127,12 @@ async function findNewRelease(
     // Apple's search forgives no typos, so a misspelt word is left out in turn.
     let song: AppleTrack | undefined;
     for (const attempt of [term, ...relaxedQueries(term).slice(0, MAX_APPLE_RETRIES)]) {
-      const songs = (await cache.getOrLoad(`apple-search:${attempt.toLowerCase()}`, SEARCH_TTL_MS, () =>
-        searchApple(attempt),
-      )) as AppleTrack[];
+      // A failed request throws, so it is retried next time instead of being cached as "no songs".
+      const songs = (await cache.getOrLoad(`apple-search:${attempt.toLowerCase()}`, SEARCH_TTL_MS, async () => {
+        const result = await searchApple(attempt);
+        if (!result) throw new Error("Apple search unavailable");
+        return result;
+      })) as AppleTrack[];
       song = songs.find(isWanted);
       if (song) break;
     }
