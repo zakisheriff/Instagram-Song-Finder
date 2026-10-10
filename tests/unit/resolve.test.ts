@@ -274,6 +274,17 @@ describe("resolveQuery: links from other services", () => {
     expect(typed).toMatchObject({ kind: "text", provider: { id: "deezer" }, tracks: [song], nextOffset: null });
   });
 
+  it("still finds a new release when its name is misspelt", async () => {
+    const song = track({ provider: "deezer", id: "deezer:20", title: 'Aathi Iva Yarraa (From "Scene")', artists: ["Sushin Shyam"] });
+    const deezer = stubProvider("deezer", { findInArtistReleases: vi.fn(async () => [song]) });
+    const searchAppleSongs = vi.fn(async (term: string) =>
+      term === "aathi iva" ? [{ title: 'Aathi Iva Yarraa (From "Scene")', artist: "Sushin Shyam", durationMs: null }] : [],
+    );
+    const result = await resolveQuery("aathi iva yaarra", { providers: [deezer], cache, searchAppleSongs });
+    expect(searchAppleSongs.mock.calls.map(([term]) => term)).toEqual(["aathi iva yaarra", "aathi iva"]);
+    expect(result.tracks).toEqual([song]);
+  });
+
   it("leaves a confident search alone", async () => {
     const findInArtistReleases = vi.fn(async () => []);
     const searchAppleSongs = vi.fn(async () => []);

@@ -100,6 +100,8 @@ async function firstSuccessful<T>(
 
 /** Most artists whose releases are checked for one song. */
 const MAX_RELEASE_ARTISTS = 4;
+/** Looser Apple searches tried when the first one doesn't name the song. */
+const MAX_APPLE_RETRIES = 3;
 
 /**
  * Finds a song that catalog search doesn't return yet, which is usual for the
@@ -122,10 +124,15 @@ async function findNewRelease(
   const searchApple = options.searchAppleSongs ?? defaultSearchAppleSongs;
 
   try {
-    const songs = (await cache.getOrLoad(`apple-search:${term.toLowerCase()}`, SEARCH_TTL_MS, () =>
-      searchApple(term),
-    )) as AppleTrack[];
-    const song = songs.find(isWanted);
+    // Apple's search forgives no typos, so a misspelt word is left out in turn.
+    let song: AppleTrack | undefined;
+    for (const attempt of [term, ...relaxedQueries(term).slice(0, MAX_APPLE_RETRIES)]) {
+      const songs = (await cache.getOrLoad(`apple-search:${attempt.toLowerCase()}`, SEARCH_TTL_MS, () =>
+        searchApple(attempt),
+      )) as AppleTrack[];
+      song = songs.find(isWanted);
+      if (song) break;
+    }
     if (!song && artistHints.length === 0) return null;
 
     const title = song?.title ?? term;
@@ -223,7 +230,7 @@ export async function resolveQuery(raw: string, options: ResolveOptions): Promis
           detected.query,
           (song) =>
             trackSimilarity(detected.query, { title: song.title, artists: [song.artist], album: null } as Track) >=
-            CONFIDENT_MATCH,
+            LINK_MATCH,
           [],
           options,
           available,
