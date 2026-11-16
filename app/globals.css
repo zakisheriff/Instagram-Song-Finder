@@ -1610,17 +1610,30 @@ select {
     font-size: 14px;
   }
 
+  /*
+   * A long, low capsule like Instagram's: 56px tall across nearly the full
+   * width, so each tab's selection is a wide oval (about 70 × 46) rather than
+   * a circle.
+   */
   .tabbar {
     position: fixed;
-    left: 16px;
-    right: 16px;
+    left: 10px;
+    right: 10px;
     bottom: calc(8px + env(safe-area-inset-bottom, 0px));
     z-index: 10;
     display: block;
   }
 
   .tabbar .lg-nav {
+    --lg-pad: 5px;
+    --lg-item-h: 46px;
+    --lg-item-w: 0px;
     width: 100%;
+  }
+
+  .tabbar .lg-nav__icon {
+    width: 24px;
+    height: 24px;
   }
 }
 
