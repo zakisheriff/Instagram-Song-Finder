@@ -112,9 +112,12 @@ export function MobileTabBar({ searchInputId }: MobileTabBarProps) {
     }
   }
 
-  const items = TABS.map(({ tab, label, Icon }) => ({
+  // The glass lens draws the filled icon wherever it covers a tab, so each
+  // tab gives both looks and the bar picks between them.
+  const items = TABS.map(({ label, Icon }) => ({
     label,
-    icon: <Icon active={active === tab} />,
+    icon: <Icon />,
+    activeIcon: <Icon active />,
   }));
 
   return (
