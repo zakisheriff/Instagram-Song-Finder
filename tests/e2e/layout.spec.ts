@@ -203,9 +203,11 @@ test("the tab bar highlights the tab for what is on screen", async ({ page }) =>
   test.skip(!isPhoneLayout(page), "phone layout only");
   await page.goto("/");
   const tabBar = page.getByRole("navigation", { name: "Sections" });
-  const tab = (name: string) => tabBar.getByRole(name === "Search for a song" ? "button" : "link", { name });
+  const tab = (name: string) => tabBar.getByRole("tab", { name, exact: true });
   const activeTabs = () =>
-    tabBar.locator("[aria-current]").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label")));
+    tabBar
+      .getByRole("tab", { selected: true })
+      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label")));
 
   await expect.poll(activeTabs).toEqual(["Home"]);
 
@@ -317,12 +319,12 @@ test("tapping controls never shows the default grey tap box", async ({ page }) =
 
 test("matches the reference field and button metrics", async ({ page }) => {
   await page.goto("/");
-  const field = await page.locator(".field").boundingBox();
+  const field = await page.locator(".field .lg-input__field").boundingBox();
   const submit = await page.getByRole("button", { name: "Search", exact: true }).boundingBox();
   expect(Math.round(field!.height)).toBe(60);
   expect(Math.round(submit!.height)).toBe(44);
 
-  const radius = await page.locator(".field").evaluate((node) => getComputedStyle(node).borderRadius);
+  const radius = await page.locator(".field .lg-input__field").evaluate((node) => getComputedStyle(node).borderRadius);
   expect(radius).toBe("16px");
 });
 

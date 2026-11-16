@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { GlassButton, GlassInput } from "@zakisheriff/liquid-glass";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { useSongSearch } from "@/hooks/useSongSearch";
 import { SEARCH_INPUT_ID } from "@/lib/search/constants";
@@ -8,7 +9,6 @@ import { MAX_QUERY_LENGTH } from "@/lib/search/detect";
 import { site } from "@/lib/site";
 import { FeedbackLinks } from "./FeedbackLinks";
 import { DemoVideo } from "./DemoVideo";
-import { CloseIcon } from "./icons";
 import { SearchResults } from "./SearchResults";
 import { SiteLockup } from "./SiteLockup";
 import { SiteLogo } from "./SiteLogo";
@@ -53,66 +53,43 @@ export function SongFinder({ headline }: SongFinderProps) {
         </h2>
 
         <form className="search" role="search" onSubmit={handleSubmit} noValidate>
-          <div className={`field${search.inputError ? " field--error" : ""}`}>
-            <input
-              id={SEARCH_INPUT_ID}
-              className="field__input"
-              type="search"
-              name="q"
-              value={search.query}
-              onChange={(event) => search.setQuery(event.target.value)}
-              placeholder=" "
-              maxLength={MAX_QUERY_LENGTH * 4}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              enterKeyHint="search"
-              inputMode="search"
-              aria-label={FIELD_LABEL}
-              aria-invalid={search.inputError ? true : undefined}
-              aria-describedby={messageId}
-            />
-            <label className="field__label" htmlFor={SEARCH_INPUT_ID}>
-              <span className="field__label-full">{FIELD_LABEL}</span>
-              <span className="field__label-short">Song name, artist, link or ISRC</span>
-            </label>
-            {search.status === "loading" ? (
-              <span className="field__action" aria-hidden="true">
-                <span className="spinner" />
-              </span>
-            ) : (
-              search.query.length > 0 && (
-                <button
-                  type="button"
-                  className="field__action"
-                  aria-label="Clear search"
-                  onClick={() => {
-                    search.clear();
-                    document.getElementById(SEARCH_INPUT_ID)?.focus();
-                  }}
-                >
-                  <CloseIcon size={16} />
-                </button>
-              )
-            )}
-          </div>
+          <GlassInput
+            id={SEARCH_INPUT_ID}
+            className={`field${search.inputError ? " field--error" : ""}`}
+            type="search"
+            name="q"
+            value={search.query}
+            onChange={(event) => search.setQuery(event.target.value)}
+            onClear={search.clear}
+            placeholder="Song name, artist, link or ISRC"
+            maxLength={MAX_QUERY_LENGTH * 4}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            enterKeyHint="search"
+            inputMode="search"
+            aria-label={FIELD_LABEL}
+            aria-invalid={search.inputError ? true : undefined}
+            aria-describedby={messageId}
+          />
 
           <p className="search__message" id={messageId} role="alert">
             {search.inputError}
           </p>
 
-          <button
+          <GlassButton
             type="submit"
-            className="button button--primary search__submit"
+            variant="filled"
+            className="search__submit"
             aria-disabled={!search.canSubmit}
           >
             Search
-          </button>
+          </GlassButton>
 
-          <a className="button button--text search__help" href="#how-it-works">
+          <GlassButton variant="clear" className="search__help" href="#how-it-works">
             How does it work?
-          </a>
+          </GlassButton>
         </form>
 
         {/* On phones the demo sits under the search box until there are results to show. */}

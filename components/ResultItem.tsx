@@ -1,5 +1,6 @@
 "use client";
 
+import { GlassButton } from "@zakisheriff/liquid-glass";
 import Image from "next/image";
 import type { CopyState } from "@/hooks/useCopy";
 import { formatArtists, formatDuration, trackMetaLine } from "@/lib/music/format";
@@ -53,15 +54,15 @@ export function ResultItem({
   const preview =
     track.previewUrl && onTogglePreview ? (
       <div className="preview">
-        <button
+        <GlassButton
           type="button"
-          className={`button button--gray${playing ? " is-playing" : ""}`}
+          className={`result__button${playing ? " is-playing" : ""}`}
+          icon={playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
           aria-pressed={playing}
           onClick={onTogglePreview}
         >
-          {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
           {playing ? "Pause preview" : "Play preview"}
-        </button>
+        </GlassButton>
         {previewFailed && (
           <p className="preview__caption" role="alert">
             This preview couldn&apos;t be played. Search again to refresh it.
@@ -74,10 +75,15 @@ export function ResultItem({
   // catalogs don't need one, so no button is offered for them.
   const sourceLink =
     provider.id === "spotify" && track.url ? (
-      <a className="button button--gray" href={track.url} target="_blank" rel="noopener noreferrer">
-        <ExternalIcon size={16} />
+      <GlassButton
+        className="result__button"
+        href={track.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        icon={<ExternalIcon size={16} />}
+      >
         Open in {provider.name}
-      </a>
+      </GlassButton>
     ) : null;
 
   return (
@@ -173,9 +179,11 @@ export function ResultItem({
               <div className="result__actions">
                 {preview}
 
-                <button
+                <GlassButton
                   type="button"
-                  className={`button button--primary${copiedInstagram && copyState?.ok ? " is-done" : ""}`}
+                  variant="filled"
+                  tint={copiedInstagram && copyState?.ok ? "var(--color-success)" : undefined}
+                  className="result__button"
                   onClick={() => onCopy(instagramCode, instagramKey)}
                 >
                   {copiedInstagram && copyState?.ok ? (
@@ -188,21 +196,22 @@ export function ResultItem({
                   ) : (
                     "Copy for Instagram"
                   )}
-                </button>
+                </GlassButton>
 
                 {/*
                   Instagram has no link that pre-fills its music search, so the
                   closest shortcut is to copy the code and open Instagram.
                 */}
-                <a
-                  className="button button--outline"
+                <GlassButton
+                  variant="tinted"
+                  className="result__button"
                   href={INSTAGRAM_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => onCopy(instagramCode, instagramKey)}
                 >
                   Copy and open Instagram
-                </a>
+                </GlassButton>
 
                 {sourceLink}
               </div>

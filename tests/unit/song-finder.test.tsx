@@ -301,7 +301,7 @@ describe("SongFinder", () => {
     await user.type(input, "die with a smile{Enter}");
     await screen.findByRole("region", { name: "Search results" });
 
-    await user.click(screen.getByRole("button", { name: "Clear search" }));
+    await user.click(screen.getByRole("button", { name: "Clear" }));
     expect(input).toHaveValue("");
     expect(screen.queryByRole("region", { name: "Search results" })).not.toBeInTheDocument();
     expect(input).toHaveFocus();

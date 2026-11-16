@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { GlassNav } from "@zakisheriff/liquid-glass";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { HomeIcon, InfoIcon, QuestionIcon, SearchIcon, StepsIcon } from "./icons";
 
@@ -12,6 +12,15 @@ interface MobileTabBarProps {
 
 type Tab = "home" | "search" | "how-it-works" | "faq" | "about";
 type Section = Extract<Tab, "home" | "how-it-works" | "faq">;
+
+/** The bar's tabs, left to right. */
+const TABS: ReadonlyArray<{ tab: Tab; label: string; Icon: typeof HomeIcon }> = [
+  { tab: "home", label: "Home", Icon: HomeIcon },
+  { tab: "how-it-works", label: "How it works", Icon: StepsIcon },
+  { tab: "faq", label: "Frequently asked questions", Icon: QuestionIcon },
+  { tab: "about", label: "About", Icon: InfoIcon },
+  { tab: "search", label: "Search for a song", Icon: SearchIcon },
+];
 
 /** Sections of the home page, in the order they appear. */
 const SECTION_IDS: ReadonlyArray<Exclude<Section, "home">> = ["how-it-works", "faq"];
@@ -35,6 +44,7 @@ function currentSection(): Section {
  */
 export function MobileTabBar({ searchInputId }: MobileTabBarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const onHome = Boolean(searchInputId);
   const [section, setSection] = useState<Section>("home");
   const [searching, setSearching] = useState(false);
@@ -73,8 +83,6 @@ export function MobileTabBar({ searchInputId }: MobileTabBarProps) {
   if (onHome) active = searching ? "search" : section;
   else if (pathname === "/about") active = "about";
 
-  const current = (tab: Tab) => (active === tab ? ("true" as const) : undefined);
-
   function focusSearch() {
     if (!searchInputId) return;
     const input = document.getElementById(searchInputId);
@@ -82,53 +90,43 @@ export function MobileTabBar({ searchInputId }: MobileTabBarProps) {
     input?.focus({ preventScroll: true });
   }
 
+  function open(tab: Tab) {
+    switch (tab) {
+      case "home":
+        if (onHome) window.scrollTo({ top: 0 });
+        else router.push("/");
+        return;
+      case "how-it-works":
+      case "faq":
+        if (onHome) {
+          document.getElementById(tab)?.scrollIntoView();
+          history.replaceState(null, "", `#${tab}`);
+        } else router.push(`/#${tab}`);
+        return;
+      case "about":
+        router.push("/about");
+        return;
+      case "search":
+        if (onHome) focusSearch();
+        else router.push("/");
+    }
+  }
+
+  const items = TABS.map(({ tab, label, Icon }) => ({
+    label,
+    icon: <Icon active={active === tab} />,
+  }));
+
   return (
     <nav className="tabbar" aria-label="Sections">
-      <ul>
-        <li>
-          <Link
-            href="/"
-            aria-label="Home"
-            aria-current={current("home")}
-            onClick={() => {
-              if (onHome) window.scrollTo({ top: 0 });
-            }}
-          >
-            <HomeIcon active={active === "home"} />
-          </Link>
-        </li>
-        <li>
-          <Link href="/#how-it-works" aria-label="How it works" aria-current={current("how-it-works")}>
-            <StepsIcon active={active === "how-it-works"} />
-          </Link>
-        </li>
-        <li>
-          <Link href="/#faq" aria-label="Frequently asked questions" aria-current={current("faq")}>
-            <QuestionIcon active={active === "faq"} />
-          </Link>
-        </li>
-        <li>
-          <Link href="/about" aria-label="About" aria-current={active === "about" ? "page" : undefined}>
-            <InfoIcon active={active === "about"} />
-          </Link>
-        </li>
-        <li>
-          {onHome ? (
-            <button
-              type="button"
-              aria-label="Search for a song"
-              aria-current={current("search")}
-              onClick={focusSearch}
-            >
-              <SearchIcon active={active === "search"} />
-            </button>
-          ) : (
-            <Link href="/" aria-label="Search for a song">
-              <SearchIcon />
-            </Link>
-          )}
-        </li>
-      </ul>
+      <GlassNav
+        items={items}
+        // With no tab current (a page outside the bar), the lens rests on Home.
+        activeIndex={Math.max(0, TABS.findIndex(({ tab }) => tab === active))}
+        onChange={(index) => open(TABS[index].tab)}
+        showLabels={false}
+        aria-label="Sections"
+      />
     </nav>
   );
 }

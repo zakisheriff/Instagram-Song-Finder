@@ -2,6 +2,7 @@ import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { Figtree } from "next/font/google";
 import { site } from "@/lib/site";
+import "@zakisheriff/liquid-glass/styles.css";
 import "./globals.css";
 
 /** Open display face standing in for the reference's proprietary headline font. */
@@ -62,7 +63,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang={site.locale} className={figtree.variable}>
+    <html lang={site.locale} className={figtree.variable} data-theme="light">
       <body>
         <a className="skip-link" href="#main">
           Skip to content

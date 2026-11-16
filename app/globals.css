@@ -441,106 +441,32 @@ select {
   margin-top: 23px;
 }
 
-/* Text field: 60px tall, 16px radius, floating label. */
+/* Search field: a GlassInput, 60px tall with a 16px radius. */
 
 .field {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: block;
+}
+
+.field .lg-input__field.lg-glass {
   height: 60px;
-  padding: 10px 16px;
-  border: 1px solid var(--color-border);
+  padding: 0 16px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.2);
-  cursor: text;
 }
 
-.field:hover,
-.field:focus-within {
-  border-color: var(--color-border-strong);
+.field .lg-input__field input {
+  font-size: 15px;
+  font-weight: 500;
+  text-overflow: ellipsis;
 }
 
-.field:has(:focus-visible) {
+.field .lg-input__field:has(:focus-visible) {
   box-shadow:
     0 0 0 2px #fff,
     0 0 0 4px var(--color-focus);
 }
 
-.field--error,
-.field--error:hover,
-.field--error:focus-within {
-  border-color: var(--color-error);
-}
-
-.field__input {
-  flex: 1 1 auto;
-  min-width: 0;
-  height: 38px;
-  margin: 0 -2px;
-  padding: 17px 2px 1px;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--color-text);
-  font-weight: 500;
-  line-height: 20px;
-  appearance: none;
-  -webkit-appearance: none;
-  text-overflow: ellipsis;
-}
-
-.field__input::-webkit-search-cancel-button,
-.field__input::-webkit-search-decoration {
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.field__label {
-  position: absolute;
-  top: 19px;
-  left: 16px;
-  right: 16px;
-  overflow: hidden;
-  color: var(--color-text-secondary);
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 20px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  pointer-events: none;
-  transform-origin: left top;
-  transition: transform 0.2s var(--ease-field);
-}
-
-.field__input:focus ~ .field__label,
-.field__input:not(:placeholder-shown) ~ .field__label {
-  font-weight: 400;
-  transform: translateY(-11px) scale(0.866667);
-}
-
-.field__action {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  margin-right: -6px;
-  border-radius: 50%;
-  color: var(--color-text-secondary);
-}
-
-@media (hover: hover) {
-  .field__action:hover {
-    background: var(--color-surface);
-    color: var(--color-text);
-  }
-}
-
-/* A shorter wording is swapped in on narrow phone screens. */
-.field__label-short {
-  display: none;
+.field--error .lg-input__field.lg-glass {
+  box-shadow: inset 0 0 0 1.5px var(--color-error);
 }
 
 .search__message {
@@ -1599,17 +1525,8 @@ select {
     margin: 32px 40px 0;
   }
 
-  .field__label-full {
-    display: none;
-  }
-
-  .field__label-short {
-    display: inline;
-  }
-
   .search__submit {
     margin-top: 16px;
-    background: var(--color-mobile-action);
     font-weight: 600;
   }
 
@@ -1675,34 +1592,15 @@ select {
 
   .tabbar {
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 16px;
+    right: 16px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
     z-index: 10;
     display: block;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    border-top: 1px solid var(--color-divider);
-    background: var(--color-bg);
   }
 
-  .tabbar ul {
-    display: flex;
-    align-items: center;
-    height: 44px;
-  }
-
-  .tabbar li {
-    flex: 1 1 0;
-  }
-
-  .tabbar a,
-  .tabbar button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .tabbar .lg-nav {
     width: 100%;
-    height: 44px;
-    color: #000;
   }
 }
 
@@ -1729,5 +1627,58 @@ select {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Liquid Glass ---------- */
+
+/*
+ * Glass bends whatever sits behind it, so the page carries a soft wash of the
+ * brand colours instead of flat white. It stays fixed while the content scrolls,
+ * which keeps the bars and buttons refracting something as they move.
+ */
+body {
+  background:
+    radial-gradient(60vmax 50vmax at 0% 0%, rgba(251, 114, 75, 0.16), transparent 70%),
+    radial-gradient(55vmax 45vmax at 100% 30%, rgba(255, 0, 105, 0.12), transparent 70%),
+    radial-gradient(60vmax 50vmax at 30% 100%, rgba(211, 0, 197, 0.12), transparent 70%),
+    var(--color-bg);
+  background-attachment: fixed;
+}
+
+.panel,
+.footer {
+  background: transparent;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+/* Glass buttons fill their column, like the pill buttons they replace. */
+.search__submit.lg-button,
+.search__help.lg-button,
+.result__button.lg-button,
+.results__more.lg-button {
+  width: 100%;
+}
+
+.search__submit.lg-button {
+  margin-top: 24px;
+  --lg-tint: var(--color-blue);
+}
+
+.search__submit.lg-button[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.search__help.lg-button {
+  margin-top: 12px;
+}
+
+@media (max-width: 875px) {
+  .search__submit.lg-button {
+    margin-top: 16px;
   }
 }

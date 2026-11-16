@@ -1,5 +1,6 @@
 "use client";
 
+import { GlassButton } from "@zakisheriff/liquid-glass";
 import { useEffect, useRef, useState } from "react";
 import { useCopy } from "@/hooks/useCopy";
 import type { SongSearch } from "@/hooks/useSongSearch";
@@ -185,9 +186,10 @@ export function SearchResults({ search, selectedId, onSelect }: SearchResultsPro
           </ul>
 
           {result.nextOffset !== null && (
-            <button
+            <GlassButton
               type="button"
-              className="button button--text results__more"
+              variant="clear"
+              className="results__more"
               onClick={search.loadMore}
               aria-disabled={search.loadingMore}
               disabled={search.loadingMore}
@@ -200,7 +202,7 @@ export function SearchResults({ search, selectedId, onSelect }: SearchResultsPro
               ) : (
                 "Show more results"
               )}
-            </button>
+            </GlassButton>
           )}
           {search.loadMoreError && (
             <p className="search__message" role="alert">
