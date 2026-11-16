@@ -2,7 +2,7 @@
 
 import { GlassNav } from "@zakisheriff/liquid-glass";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HomeIcon, InfoIcon, QuestionIcon, SearchIcon, StepsIcon } from "./icons";
 
 interface MobileTabBarProps {
@@ -48,6 +48,18 @@ export function MobileTabBar({ searchInputId }: MobileTabBarProps) {
   const onHome = Boolean(searchInputId);
   const [section, setSection] = useState<Section>("home");
   const [searching, setSearching] = useState(false);
+  // The tab just tapped. It stays lit while the page scrolls or loads there, so
+  // the highlight goes straight to it instead of passing every tab on the way.
+  const [target, setTarget] = useState<Tab | null>(null);
+  const release = useRef<() => void>(() => {});
+
+  // Load the other pages ahead of time so tapping a tab opens them at once.
+  useEffect(() => {
+    router.prefetch("/about");
+    router.prefetch("/");
+  }, [router]);
+
+  useEffect(() => () => release.current(), []);
 
   useEffect(() => {
     if (!onHome) return;
@@ -82,33 +94,67 @@ export function MobileTabBar({ searchInputId }: MobileTabBarProps) {
   let active: Tab | null = null;
   if (onHome) active = searching ? "search" : section;
   else if (pathname === "/about") active = "about";
+  if (target) active = target;
+
+  /** Keeps `tab` lit until the scroll it started comes to rest. */
+  function holdUntilScrollEnds(tab: Tab) {
+    release.current();
+    setTarget(tab);
+    let timer = 0;
+    const done = () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("scrollend", done);
+      setTarget(null);
+    };
+    // Browsers without `scrollend`, and taps that need no scroll, fall back to a timer.
+    timer = window.setTimeout(done, 1200);
+    window.addEventListener("scrollend", done);
+    release.current = () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("scrollend", done);
+    };
+  }
+
+  /** Smooth unless the visitor has asked for reduced motion. */
+  function scrollBehavior(): ScrollBehavior {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  }
 
   function focusSearch() {
     if (!searchInputId) return;
     const input = document.getElementById(searchInputId);
-    input?.scrollIntoView({ block: "center" });
+    input?.scrollIntoView({ block: "center", behavior: scrollBehavior() });
     input?.focus({ preventScroll: true });
   }
 
   function open(tab: Tab) {
+    // On another page the tab lights up at once and stays lit while the page loads.
+    if (!onHome) {
+      release.current();
+      setTarget(tab);
+      router.push(tab === "how-it-works" || tab === "faq" ? `/#${tab}` : tab === "about" ? "/about" : "/");
+      return;
+    }
     switch (tab) {
       case "home":
-        if (onHome) window.scrollTo({ top: 0 });
-        else router.push("/");
+        holdUntilScrollEnds(tab);
+        window.scrollTo({ top: 0, behavior: scrollBehavior() });
+        history.replaceState(null, "", "/");
         return;
       case "how-it-works":
       case "faq":
-        if (onHome) {
-          document.getElementById(tab)?.scrollIntoView();
-          history.replaceState(null, "", `#${tab}`);
-        } else router.push(`/#${tab}`);
+        holdUntilScrollEnds(tab);
+        document.getElementById(tab)?.scrollIntoView({ block: "start", behavior: scrollBehavior() });
+        history.replaceState(null, "", `#${tab}`);
         return;
       case "about":
+        release.current();
+        setTarget(tab);
         router.push("/about");
         return;
       case "search":
-        if (onHome) focusSearch();
-        else router.push("/");
+        holdUntilScrollEnds(tab);
+        focusSearch();
     }
   }
 

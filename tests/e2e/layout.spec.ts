@@ -230,6 +230,42 @@ test("the tab bar highlights the tab for what is on screen", async ({ page }) =>
   await expect.poll(activeTabs).toEqual(["About"]);
 });
 
+test("the tab bar goes straight to a tapped tab without lighting the ones in between", async ({
+  page,
+}) => {
+  test.skip(!isPhoneLayout(page), "phone layout only");
+  await page.goto("/");
+  const tabBar = page.getByRole("navigation", { name: "Sections" });
+
+  // Record every tab that is lit while the page scrolls.
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { litTabs: string[] }).litTabs = seen;
+    const record = () => {
+      const lit = document.querySelector('.tabbar [role="tab"][aria-selected="true"]');
+      const name = lit?.getAttribute("aria-label");
+      if (name && seen[seen.length - 1] !== name) seen.push(name);
+    };
+    record();
+    new MutationObserver(record).observe(document.querySelector(".tabbar")!, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["aria-selected"],
+    });
+  });
+  const litTabs = () => page.evaluate(() => (window as unknown as { litTabs: string[] }).litTabs);
+
+  await tabBar.getByRole("tab", { name: "Frequently asked questions", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
+  await page.waitForTimeout(1500);
+  expect(await litTabs()).toEqual(["Home", "Frequently asked questions"]);
+
+  await tabBar.getByRole("tab", { name: "Home", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(5);
+  await page.waitForTimeout(1500);
+  expect(await litTabs()).toEqual(["Home", "Frequently asked questions", "Home"]);
+});
+
 test("the top-right pill links to GitHub, then becomes Try now past the hero", async ({ page }) => {
   await page.goto("/");
   const star = page.getByRole("link", { name: "Star on GitHub" });
