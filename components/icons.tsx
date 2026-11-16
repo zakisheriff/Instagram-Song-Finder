@@ -44,7 +44,7 @@ export const StepsIcon = ({ active, ...props }: TabIconProps) => (
 export const QuestionIcon = ({ active, ...props }: TabIconProps) => (
   <svg {...base(props)}>
     <circle cx="12" cy="12" r="9.5" fill={active ? "currentColor" : "none"} />
-    <g stroke={active ? "#fff" : "currentColor"}>
+    <g stroke={active ? "var(--color-bg)" : "currentColor"}>
       <path d="M9.2 9.2a2.9 2.9 0 1 1 4.3 2.5c-.9.5-1.5 1.1-1.5 2.1" />
       <path d="M12 17.2h.01" strokeWidth={3} />
     </g>
@@ -54,7 +54,7 @@ export const QuestionIcon = ({ active, ...props }: TabIconProps) => (
 export const InfoIcon = ({ active, ...props }: TabIconProps) => (
   <svg {...base(props)}>
     <circle cx="12" cy="12" r="9.5" fill={active ? "currentColor" : "none"} />
-    <g stroke={active ? "#fff" : "currentColor"}>
+    <g stroke={active ? "var(--color-bg)" : "currentColor"}>
       <path d="M12 11v6" />
       <path d="M12 7.3h.01" strokeWidth={3} />
     </g>

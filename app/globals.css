@@ -33,6 +33,31 @@
   --ease-field: cubic-bezier(0.17, 0.17, 0, 1);
   --panel-width: 650px;
   --tabbar-height: 45px;
+  --color-overlay: #000;
+
+  color-scheme: light dark;
+}
+
+/* Black background and light text when the device is in dark mode. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: rgb(0, 0, 0);
+    --color-text: rgb(245, 245, 247);
+    --color-text-secondary: rgb(152, 152, 157);
+    --color-text-muted: rgb(142, 142, 147);
+    --color-text-on-gray: rgb(229, 229, 234);
+    --color-blue: rgb(10, 132, 255);
+    --color-link: rgb(125, 140, 255);
+    --color-mobile-action: rgb(10, 132, 255);
+    --color-border: rgb(58, 58, 60);
+    --color-border-strong: rgb(142, 142, 147);
+    --color-divider: rgb(38, 38, 40);
+    --color-surface: rgb(28, 28, 30);
+    --color-focus: rgb(10, 132, 255);
+    --color-error: rgb(255, 69, 58);
+    --color-success: rgb(48, 209, 88);
+    --color-overlay: #fff;
+  }
 }
 
 *,
@@ -461,7 +486,7 @@ select {
 
 .field .lg-input__field:has(:focus-visible) {
   box-shadow:
-    0 0 0 2px #fff,
+    0 0 0 2px var(--color-bg),
     0 0 0 4px var(--color-focus);
 }
 
@@ -506,7 +531,7 @@ select {
   content: "";
   position: absolute;
   inset: 0;
-  background: #000;
+  background: var(--color-overlay);
   opacity: 0;
   transition: opacity 0.1s linear;
   pointer-events: none;
@@ -552,7 +577,7 @@ select {
 
 .button--outline {
   border-color: var(--color-blue);
-  background: rgba(255, 255, 255, 0.2);
+  background: transparent;
   color: var(--color-blue);
 }
 
@@ -1631,29 +1656,6 @@ select {
 }
 
 /* ---------- Liquid Glass ---------- */
-
-/*
- * Glass bends whatever sits behind it, so the page carries a soft wash of the
- * brand colours instead of flat white. It stays fixed while the content scrolls,
- * which keeps the bars and buttons refracting something as they move.
- */
-body {
-  background:
-    radial-gradient(60vmax 50vmax at 0% 0%, rgba(251, 114, 75, 0.16), transparent 70%),
-    radial-gradient(55vmax 45vmax at 100% 30%, rgba(255, 0, 105, 0.12), transparent 70%),
-    radial-gradient(60vmax 50vmax at 30% 100%, rgba(211, 0, 197, 0.12), transparent 70%),
-    var(--color-bg);
-  background-attachment: fixed;
-}
-
-.panel,
-.footer {
-  background: transparent;
-}
-
-.card {
-  background: rgba(255, 255, 255, 0.55);
-}
 
 /* Glass buttons fill their column, like the pill buttons they replace. */
 .search__submit.lg-button,
